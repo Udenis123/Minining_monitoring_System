@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Mining - Auth Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-container {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .response {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+    </style>
+</head>
+<body>
+    <h1>Smart Mining - Authentication Test</h1>
+
+    <!-- Register Form -->
+    <div class="form-container">
+        <h2>Register</h2>
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="registerName">Name:</label>
+                <input type="text" id="registerName" required>
+            </div>
+            <div class="form-group">
+                <label for="registerEmail">Email:</label>
+                <input type="email" id="registerEmail" required>
+            </div>
+            <div class="form-group">
+                <label for="registerPassword">Password:</label>
+                <input type="password" id="registerPassword" required>
+            </div>
+            <div class="form-group">
+                <label for="registerPasswordConfirm">Confirm Password:</label>
+                <input type="password" id="registerPasswordConfirm" required>
+            </div>
+            <button type="submit">Register</button>
+        </form>
+        <div id="registerResponse" class="response"></div>
+    </div>
+
+    <!-- Login Form -->
+    <div class="form-container">
+        <h2>Login</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="loginEmail">Email:</label>
+                <input type="email" id="loginEmail" required>
+            </div>
+            <div class="form-group">
+                <label for="loginPassword">Password:</label>
+                <input type="password" id="loginPassword" required>
+            </div>
+            <button type="submit">Login</button>
+        </form>
+        <div id="loginResponse" class="response"></div>
+    </div>
+
+    <!-- Forgot Password Form -->
+    <div class="form-container">
+        <h2>Forgot Password</h2>
+        <form id="forgotPasswordForm">
+            <div class="form-group">
+                <label for="forgotEmail">Email:</label>
+                <input type="email" id="forgotEmail" required>
+            </div>
+            <button type="submit">Send Reset Link</button>
+        </form>
+        <div id="forgotPasswordResponse" class="response"></div>
+    </div>
+
+    <!-- Reset Password Form -->
+    <div class="form-container">
+        <h2>Reset Password</h2>
+        <form id="resetPasswordForm">
+            <div class="form-group">
+                <label for="resetToken">Reset Token:</label>
+                <input type="text" id="resetToken" required>
+            </div>
+            <div class="form-group">
+                <label for="resetEmail">Email:</label>
+                <input type="email" id="resetEmail" required>
+            </div>
+            <div class="form-group">
+                <label for="resetPassword">New Password:</label>
+                <input type="password" id="resetPassword" required>
+            </div>
+            <div class="form-group">
+                <label for="resetPasswordConfirm">Confirm New Password:</label>
+                <input type="password" id="resetPasswordConfirm" required>
+            </div>
+            <button type="submit">Reset Password</button>
+        </form>
+        <div id="resetPasswordResponse" class="response"></div>
+    </div>
+
+    <!-- User Info (Protected) -->
+    <div class="form-container">
+        <h2>User Info</h2>
+        <button id="getUserInfo">Get User Info</button>
+        <div id="userInfoResponse" class="response"></div>
+    </div>
+
+    <!-- Logout -->
+    <div class="form-container">
+        <h2>Logout</h2>
+        <button id="logoutButton">Logout</button>
+        <div id="logoutResponse" class="response"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000/api';
+        let authToken = localStorage.getItem('token');
+
+        // Helper function to display responses
+        function showResponse(elementId, response, isError = false) {
+            const element = document.getElementById(elementId);
+            // Handle both string responses and objects
+            const message = typeof response === 'string' ? response : (response.message || JSON.stringify(response));
+            element.textContent = message;
+            element.className = `response ${isError ? 'error' : 'success'}`;
+        }
+
+        // Register
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_URL}/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: document.getElementById('registerName').value,
+                        email: document.getElementById('registerEmail').value,
+                        password: document.getElementById('registerPassword').value,
+                        password_confirmation: document.getElementById('registerPasswordConfirm').value
+                    })
+                });
+                const data = await response.json();
+                showResponse('registerResponse', data, !response.ok);
+                
+                if (response.ok) {
+                    document.getElementById('registerForm').reset();
+                }
+            } catch (error) {
+                showResponse('registerResponse', error.message, true);
+            }
+        });
+
+        // Login
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: document.getElementById('loginEmail').value,
+                        password: document.getElementById('loginPassword').value
+                    })
+                });
+                const data = await response.json();
+                if (response.ok && data.token) {
+                    authToken = data.token;
+                    localStorage.setItem('token', data.token);
+                }
+                showResponse('loginResponse', data, !response.ok);
+                
+                if (response.ok) {
+                    document.getElementById('loginForm').reset();
+                }
+            } catch (error) {
+                showResponse('loginResponse', error.message, true);
+            }
+        });
+
+        // Forgot Password
+        document.getElementById('forgotPasswordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_URL}/forgot-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: document.getElementById('forgotEmail').value
+                    })
+                });
+                const data = await response.json();
+                showResponse('forgotPasswordResponse', data, !response.ok);
+                
+                if (response.ok) {
+                    document.getElementById('forgotPasswordForm').reset();
+                }
+            } catch (error) {
+                showResponse('forgotPasswordResponse', error.message, true);
+            }
+        });
+
+        // Reset Password
+        document.getElementById('resetPasswordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch(`${API_URL}/reset-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        token: document.getElementById('resetToken').value,
+                        email: document.getElementById('resetEmail').value,
+                        password: document.getElementById('resetPassword').value,
+                        password_confirmation: document.getElementById('resetPasswordConfirm').value
+                    })
+                });
+                const data = await response.json();
+                showResponse('resetPasswordResponse', data, !response.ok);
+                
+                if (response.ok) {
+                    document.getElementById('resetPasswordForm').reset();
+                }
+            } catch (error) {
+                showResponse('resetPasswordResponse', error.message, true);
+            }
+        });
+
+        // Get User Info
+        document.getElementById('getUserInfo').addEventListener('click', async () => {
+            if (!authToken) {
+                showResponse('userInfoResponse', 'Please login first', true);
+                return;
+            }
+            try {
+                const response = await fetch(`${API_URL}/user`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Accept': 'application/json',
+                    }
+                });
+                const data = await response.json();
+                showResponse('userInfoResponse', data, !response.ok);
+            } catch (error) {
+                showResponse('userInfoResponse', error.message, true);
+            }
+        });
+
+        // Logout
+        document.getElementById('logoutButton').addEventListener('click', async () => {
+            if (!authToken) {
+                showResponse('logoutResponse', 'Not logged in', true);
+                return;
+            }
+            try {
+                const response = await fetch(`${API_URL}/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Accept': 'application/json',
+                    }
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = null;
+                    localStorage.removeItem('token');
+                }
+                showResponse('logoutResponse', data, !response.ok);
+            } catch (error) {
+                showResponse('logoutResponse', error.message, true);
+            }
+        });
+    </script>
+</body>
+</html> 
