@@ -1,38 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { useAuthStore } from '../store/authStore';
-import { mockSensorData, mockMines } from '../data/mockData';
+import { mockSensorData, mockMines, mockSensorTypes, sectorLabels } from '../data/mockData';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Activity, ThermometerSun, Wind, Mountain, Filter } from 'lucide-react';
 
+type SectorLabels = {
+  [key: string]: string;
+};
+
 export function SensorMonitoring() {
   const user = useAuthStore(state => state.user);
-  const [selectedMine, setSelectedMine] = useState(user?.mineId || 'all');
-  const [selectedSector, setSelectedSector] = useState('all');
+  // Get the first mine and sector as defaults
+  const getDefaults = () => {
+    const firstMineId = mockMines[0].id;
+    const firstSectorForMine = Object.keys(sectorLabels)
+      .find(sectorId => sectorId !== 'all' && sectorId.startsWith(`${firstMineId}-`));
+    return {
+      mine: firstMineId,
+      sector: firstSectorForMine || 'all'
+    };
+  };
+
+  const defaults = getDefaults();
+  const [selectedMine, setSelectedMine] = useState(defaults.mine);
+  const [selectedSector, setSelectedSector] = useState(defaults.sector);
   const [trailData, setTrailData] = useState<{ [key: string]: { time: string; value: number }[] }>({});
   const [livePoint, setLivePoint] = useState<{ [key: string]: { time: string; value: number } }>({});
 
-  const sectors = {
-    'all': 'All Sectors',
-    'sector-1': 'Sector A',
-    'sector-2': 'Sector B',
-    'sector-3': 'Sector C'
-  };
+  // Get available sectors based on selected mine
+  const availableSectors = Object.entries(sectorLabels as SectorLabels)
+    .filter(([id]) => {
+      if (selectedMine === 'all') return true;
+      return id.startsWith(`${selectedMine}-`);
+    })
+    .filter(([id]) => id !== 'all') // Remove 'all' option from sectors
+    .reduce<SectorLabels>((acc, [id, name]) => ({ ...acc, [id]: name }), {});
 
-  const sensorTypes = [
-    { id: 'gas', name: 'Gas Levels', icon: Wind, unit: 'PPM', color: '#2563eb', sectorId: 'sector-1' },
-    { id: 'temperature', name: 'Temperature', icon: ThermometerSun, unit: '°C', color: '#f59e0b', sectorId: 'sector-1' },
-    { id: 'seismic', name: 'Seismic Activity', icon: Activity, unit: 'Hz', color: '#dc2626', sectorId: 'sector-1' },
-    { id: 'strain', name: 'Structural Strain', icon: Mountain, unit: 'MPa', color: '#10b981', sectorId: 'sector-1' },
-    { id: 'gas', name: 'Gas Levels', icon: Wind, unit: 'PPM', color: '#2563eb', sectorId: 'sector-2' },
-    { id: 'temperature', name: 'Temperature', icon: ThermometerSun, unit: '°C', color: '#f59e0b', sectorId: 'sector-2' },
-    { id: 'seismic', name: 'Seismic Activity', icon: Activity, unit: 'Hz', color: '#dc2626', sectorId: 'sector-2' },
-    { id: 'strain', name: 'Structural Strain', icon: Mountain, unit: 'MPa', color: '#10b981', sectorId: 'sector-2' },
-    { id: 'gas', name: 'Gas Levels', icon: Wind, unit: 'PPM', color: '#2563eb', sectorId: 'sector-3' },
-    { id: 'temperature', name: 'Temperature', icon: ThermometerSun, unit: '°C', color: '#f59e0b', sectorId: 'sector-3' },
-    { id: 'seismic', name: 'Seismic Activity', icon: Activity, unit: 'Hz', color: '#dc2626', sectorId: 'sector-3' },
-    { id: 'strain', name: 'Structural Strain', icon: Mountain, unit: 'MPa', color: '#10b981', sectorId: 'sector-3' }
-  ];
+  // Get sector-specific sensor types based on selected mine and sector
+  const sensorTypes = mockSensorTypes.flatMap(type => 
+    type.sectorSpecific.filter(sensor => {
+      return sensor.sectorId === selectedSector && sensor.mineId === selectedMine;
+    })
+  );
 
   // Generate historical data with more realistic patterns
   const generateHistoricalData = (type: string, hours: number = 24) => {
@@ -76,10 +86,10 @@ export function SensorMonitoring() {
           };
           // Update trail data with the new live point
           setTrailData(prevData => {
-            const updatedTrail = [...(prevData[sensor.id] || []), newDataPoint].slice(-300); // Keep last 300 points (5 minutes of data)
-            return { ...prevData, [sensor.id]: updatedTrail };
+            const updatedTrail = [...(prevData[`${sensor.id}-${sensor.sectorId}`] || []), newDataPoint].slice(-300); // Keep last 300 points (5 minutes of data)
+            return { ...prevData, [`${sensor.id}-${sensor.sectorId}`]: updatedTrail };
           });
-          return { ...prevPoint, [sensor.id]: newDataPoint };
+          return { ...prevPoint, [`${sensor.id}-${sensor.sectorId}`]: newDataPoint };
         });
       }, 1000); // Update every second
 
@@ -87,7 +97,7 @@ export function SensorMonitoring() {
     });
 
     return () => intervals.forEach(interval => clearInterval(interval));
-  }, []);
+  }, [sensorTypes]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -104,10 +114,15 @@ export function SensorMonitoring() {
                 <>
                   <select
                     value={selectedMine}
-                    onChange={(e) => setSelectedMine(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedMine(e.target.value);
+                      // Find first sector for selected mine
+                      const firstSectorForMine = Object.keys(sectorLabels)
+                        .find(sectorId => sectorId !== 'all' && sectorId.startsWith(`${e.target.value}-`));
+                      setSelectedSector(firstSectorForMine || '');
+                    }}
                     className="px-4 py-2 border rounded-lg bg-white"
                   >
-                    <option value="all">All Mines</option>
                     {mockMines.map(mine => (
                       <option key={mine.id} value={mine.id}>
                         {mine.name}
@@ -119,7 +134,7 @@ export function SensorMonitoring() {
                     onChange={(e) => setSelectedSector(e.target.value)}
                     className="px-4 py-2 border rounded-lg bg-white"
                   >
-                    {Object.entries(sectors).map(([id, name]) => (
+                    {Object.entries(availableSectors).map(([id, name]) => (
                       <option key={id} value={id}>
                         {name}
                       </option>
@@ -132,20 +147,25 @@ export function SensorMonitoring() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {sensorTypes
-            .filter(sensor => selectedSector === 'all' || sensor.sectorId === selectedSector) // Filter sensors by sector
-            .map(sensor => {
-              const data = [...(trailData[sensor.id] || []), livePoint[sensor.id]].filter(Boolean);
-              const currentValue = livePoint[sensor.id]?.value || 0;
+          {sensorTypes.map(sensor => {
+              const sensorKey = `${sensor.id}-${sensor.sectorId}`;
+              const data = [...(trailData[sensorKey] || []), livePoint[sensorKey]].filter(Boolean);
+              const currentValue = livePoint[sensorKey]?.value || 0;
               const avgValue = data.reduce((acc, curr) => acc + curr.value, 0) / data.length;
               const maxValue = Math.max(...data.map(d => d.value));
 
               return (
-                <div key={sensor.id} className="bg-white p-6 rounded-xl shadow-sm">
+                <div key={sensorKey} className="bg-white p-6 rounded-xl shadow-sm">
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2">
-                      <sensor.icon className="w-6 h-6" style={{ color: sensor.color }} />
-                      <h2 className="text-lg font-semibold">{sensor.name}</h2>
+                      {sensor.icon === 'Wind' && <Wind className="w-6 h-6" style={{ color: sensor.color }} />}
+                      {sensor.icon === 'ThermometerSun' && <ThermometerSun className="w-6 h-6" style={{ color: sensor.color }} />}
+                      {sensor.icon === 'Activity' && <Activity className="w-6 h-6" style={{ color: sensor.color }} />}
+                      {sensor.icon === 'Mountain' && <Mountain className="w-6 h-6" style={{ color: sensor.color }} />}
+                      <div>
+                        <h2 className="text-lg font-semibold">{sensor.name}</h2>
+                        <p className="text-sm text-gray-500">{(sectorLabels as SectorLabels)[sensor.sectorId]}</p>
+                      </div>
                     </div>
                     <div className="text-2xl font-bold" style={{ color: sensor.color }}>
                       {currentValue.toFixed(2)} {sensor.unit}

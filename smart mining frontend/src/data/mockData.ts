@@ -67,8 +67,8 @@ const mockSectors: Sector[] = [
   {
     id: 'sector-1',
     name: 'Sector A',
-    level: 1,
     status: 'active',
+    level: 1,
     sensors: [
       {
         id: 'sensor-config-1',
@@ -135,8 +135,8 @@ const mockSectors: Sector[] = [
   {
     id: 'sector-2',
     name: 'Sector B',
-    level: 2,
     status: 'maintenance',
+    level: 2,
     sensors: [
       {
         id: 'sensor-config-5',
@@ -203,8 +203,8 @@ const mockSectors: Sector[] = [
   {
     id: 'sector-3',
     name: 'Sector C',
-    level: 3,
     status: 'active',
+    level: 3,
     sensors: [
       {
         id: 'sensor-config-9',
@@ -256,7 +256,7 @@ const mockSectors: Sector[] = [
         type: 'strain',
         location: 'Processing Area',
         coordinates: { lat: 51.5077, lng: -0.1281 },
-        status: 'active',
+        status: 'inactive',
         installationDate: new Date('2024-01-15'),
         lastCalibration: new Date('2024-03-01'),
         specifications: {
@@ -303,7 +303,19 @@ export const mockMines: Mine[] = [
     sectors: [mockSectors[2]],
     depth: 250,
     description: 'Tunnel mining operation with advanced safety systems'
+  },
+  {
+    id: 'mine4',
+    name: 'Kigali Tunnel',
+    location: 'Sector A',
+    status: 'active',
+    areaNumber: 'NA-001',
+    coordinates: { lat: 51.5074, lng: -0.1278 },
+    sectors: [mockSectors[0], mockSectors[1]],
+    depth: 410,
+    description: 'Primary mining operation with advanced ventilation systems'
   }
+ 
 ];
 
 const mockSectorAccess: SectorAccess[] = [
@@ -754,6 +766,162 @@ export const mockSensorData: Record<string, SensorData[]> = {
       sectorId: 'sector-3'
     }
   ],
+  mine4: [
+    {
+      id: 'sensor1',
+      type: 'gas',
+      value: 23,
+      unit: 'PPM',
+      timestamp: new Date(),
+      status: 'normal',
+      location: 'Level 1',
+      mineId: 'mine4',
+      sectorId: 'sector-1'
+    },
+    {
+      id: 'sensor2',
+      type: 'temperature',
+      value: 24.5,
+      unit: '°C',
+      timestamp: new Date(),
+      status: 'normal',
+      location: 'Level 2',
+      mineId: 'mine4',
+      sectorId: 'sector-1'
+    },
+    {
+      id: 'sensor3',
+      type: 'seismic',
+      value: 0.5,
+      unit: 'Hz',
+      timestamp: new Date(),
+      status: 'normal',
+      location: 'Level 1',
+      mineId: 'mine4',
+      sectorId: 'sector-1'
+    },
+    {
+      id: 'sensor4',
+      type: 'strain',
+      value: 2,
+      unit: 'MPa',
+      timestamp: new Date(),
+      status: 'normal',
+      location: 'Level 2',
+      mineId: 'mine4',
+      sectorId: 'sector-1'
+    },
+    {
+      id: 'sensor5',
+      type: 'gas',
+      value: 45,
+      unit: 'PPM',
+      timestamp: new Date(),
+      status: 'warning',
+      location: 'Level 1',
+      mineId: 'mine4',
+      sectorId: 'sector-2'
+    },
+    {
+      id: 'sensor6',
+      type: 'temperature',
+      value: 28,
+      unit: '°C',
+      timestamp: new Date(),
+      status: 'normal',
+      location: 'Level 2',
+      mineId: 'mine4',
+      sectorId: 'sector-2'
+    },
+    {
+      id: 'sensor7',
+      type: 'seismic',
+      value: 0.7,
+      unit: 'Hz',
+      timestamp: new Date(),
+      status: 'normal',
+      location: 'Level 1',
+      mineId: 'mine4',
+      sectorId: 'sector-2'
+    },
+    {
+      id: 'sensor8',
+      type: 'strain',
+      value: 1.5,
+      unit: 'MPa',
+      timestamp: new Date(),
+      status: 'normal',
+      location: 'Level 2',
+      mineId: 'mine4',
+      sectorId: 'sector-2'
+    },
+    {
+      id: 'sensor9',
+      type: 'gas',
+      value: 35,
+      unit: 'PPM',
+      timestamp: new Date(),
+      status: 'normal',
+      location: 'Level 1',
+      mineId: 'mine4',
+      sectorId: 'sector-3'
+    },
+    {
+      id: 'sensor10',
+      type: 'temperature',
+      value: 30,
+      unit: '°C',
+      timestamp: new Date(),
+      status: 'normal',
+      location: 'Level 2',
+      mineId: 'mine4',
+      sectorId: 'sector-3'
+    },
+    {
+      id: 'sensor11',
+      type: 'seismic',
+      value: 0.6,
+      unit: 'Hz',
+      timestamp: new Date(),
+      status: 'normal',
+      location: 'Level 1',
+      mineId: 'mine4',
+      sectorId: 'sector-3'
+    },
+    {
+      id: 'sensor12',
+      type: 'strain',
+      value: 1.8,
+      unit: 'MPa',
+      timestamp: new Date(),
+      status: 'normal',
+      location: 'Level 2',
+      mineId: 'mine4',
+      sectorId: 'sector-3'
+    },
+    {
+      id: 'sensor13',
+      type: 'gas',
+      value: 23,
+      unit: 'PPM',
+      timestamp: new Date(),
+      status: 'normal',
+      location: 'Level 1',
+      mineId: 'mine4',
+      sectorId: 'sector-1'
+    },
+    {
+      id: 'sensor14',
+      type: 'temperature',
+      value: 24.5,
+      unit: '°C',
+      timestamp: new Date(),
+      status: 'normal',
+      location: 'Level 2',
+      mineId: 'mine4',
+      sectorId: 'sector-1'
+    }
+  ],
 };
 
 export const mockAlerts: Record<string, Alert[]> = {
@@ -805,7 +973,7 @@ export const mockMiners: Record<string, MinerData[]> = {
       status: 'active',
       lastUpdate: new Date(),
       mineId: 'mine1',
-      sectorId: 'sector-1'
+      sectorId: 'mine1-sector-1'
     },
   ],
   mine2: [
@@ -817,7 +985,7 @@ export const mockMiners: Record<string, MinerData[]> = {
       status: 'active',
       lastUpdate: new Date(),
       mineId: 'mine2',
-      sectorId: 'sector-2'
+      sectorId: 'mine2-sector-2'
     },
   ],
   mine3: [
@@ -829,7 +997,138 @@ export const mockMiners: Record<string, MinerData[]> = {
       status: 'active',
       lastUpdate: new Date(),
       mineId: 'mine3',
-      sectorId: 'sector-1'
+      sectorId: 'mine3-sector-1'
     },
   ],
+  mine4: [
+    {
+      id: 'miner4',
+      name: 'Jane Smith',
+      role: 'Supervisor',
+      location: 'Level 1',
+      status: 'active',
+      lastUpdate: new Date(),
+      mineId: 'mine4',
+      sectorId: 'mine4-sector-1'
+    },
+  ],
+};
+
+export const mockSensorTypes = [
+  {
+    id: 'gas',
+    name: 'Gas Levels',
+    icon: 'Wind',
+    unit: 'PPM',
+    color: '#2563eb',
+    thresholds: {
+      warning: 45,
+      critical: 60
+    },
+    sectorSpecific: [
+      { id: 'gas', name: 'Gas Levels', icon: 'Wind', unit: 'PPM', color: '#2563eb', sectorId: 'mine1-sector-1', mineId: 'mine1' },
+      { id: 'gas', name: 'Gas Levels', icon: 'Wind', unit: 'PPM', color: '#2563eb', sectorId: 'mine1-sector-2', mineId: 'mine1' },
+      { id: 'gas', name: 'Gas Levels', icon: 'Wind', unit: 'PPM', color: '#2563eb', sectorId: 'mine1-sector-3', mineId: 'mine1' },
+      { id: 'gas', name: 'Gas Levels', icon: 'Wind', unit: 'PPM', color: '#2563eb', sectorId: 'mine2-sector-1', mineId: 'mine2' },
+      { id: 'gas', name: 'Gas Levels', icon: 'Wind', unit: 'PPM', color: '#2563eb', sectorId: 'mine2-sector-2', mineId: 'mine2' },
+      { id: 'gas', name: 'Gas Levels', icon: 'Wind', unit: 'PPM', color: '#2563eb', sectorId: 'mine2-sector-3', mineId: 'mine2' },
+      { id: 'gas', name: 'Gas Levels', icon: 'Wind', unit: 'PPM', color: '#2563eb', sectorId: 'mine3-sector-1', mineId: 'mine3' },
+      { id: 'gas', name: 'Gas Levels', icon: 'Wind', unit: 'PPM', color: '#2563eb', sectorId: 'mine3-sector-2', mineId: 'mine3' },
+      { id: 'gas', name: 'Gas Levels', icon: 'Wind', unit: 'PPM', color: '#2563eb', sectorId: 'mine3-sector-3', mineId: 'mine3' },
+      { id: 'gas', name: 'Gas Levels', icon: 'Wind', unit: 'PPM', color: '#2563eb', sectorId: 'mine4-sector-1', mineId: 'mine4' },
+      { id: 'gas', name: 'Gas Levels', icon: 'Wind', unit: 'PPM', color: '#2563eb', sectorId: 'mine4-sector-2', mineId: 'mine4' },
+      { id: 'gas', name: 'Gas Levels', icon: 'Wind', unit: 'PPM', color: '#2563eb', sectorId: 'mine4-sector-3', mineId: 'mine4' }
+    ]
+  },
+  {
+    id: 'temperature',
+    name: 'Temperature',
+    icon: 'ThermometerSun',
+    unit: '°C',
+    color: '#f59e0b',
+    thresholds: {
+      warning: 35,
+      critical: 40
+    },
+    sectorSpecific: [
+      { id: 'temperature', name: 'Temperature', icon: 'ThermometerSun', unit: '°C', color: '#f59e0b', sectorId: 'mine1-sector-1', mineId: 'mine1' },
+      { id: 'temperature', name: 'Temperature', icon: 'ThermometerSun', unit: '°C', color: '#f59e0b', sectorId: 'mine1-sector-2', mineId: 'mine1' },
+      { id: 'temperature', name: 'Temperature', icon: 'ThermometerSun', unit: '°C', color: '#f59e0b', sectorId: 'mine1-sector-3', mineId: 'mine1' },
+      { id: 'temperature', name: 'Temperature', icon: 'ThermometerSun', unit: '°C', color: '#f59e0b', sectorId: 'mine2-sector-1', mineId: 'mine2' },
+      { id: 'temperature', name: 'Temperature', icon: 'ThermometerSun', unit: '°C', color: '#f59e0b', sectorId: 'mine2-sector-2', mineId: 'mine2' },
+      { id: 'temperature', name: 'Temperature', icon: 'ThermometerSun', unit: '°C', color: '#f59e0b', sectorId: 'mine2-sector-3', mineId: 'mine2' },
+      { id: 'temperature', name: 'Temperature', icon: 'ThermometerSun', unit: '°C', color: '#f59e0b', sectorId: 'mine3-sector-1', mineId: 'mine3' },
+      { id: 'temperature', name: 'Temperature', icon: 'ThermometerSun', unit: '°C', color: '#f59e0b', sectorId: 'mine3-sector-2', mineId: 'mine3' },
+      { id: 'temperature', name: 'Temperature', icon: 'ThermometerSun', unit: '°C', color: '#f59e0b', sectorId: 'mine3-sector-3', mineId: 'mine3' },
+      { id: 'temperature', name: 'Temperature', icon: 'ThermometerSun', unit: '°C', color: '#f59e0b', sectorId: 'mine4-sector-1', mineId: 'mine4' },
+      { id: 'temperature', name: 'Temperature', icon: 'ThermometerSun', unit: '°C', color: '#f59e0b', sectorId: 'mine4-sector-2', mineId: 'mine4' },
+      { id: 'temperature', name: 'Temperature', icon: 'ThermometerSun', unit: '°C', color: '#f59e0b', sectorId: 'mine4-sector-3', mineId: 'mine4' }
+    ]
+  },
+  {
+    id: 'seismic',
+    name: 'Seismic Activity',
+    icon: 'Activity',
+    unit: 'Hz',
+    color: '#dc2626',
+    thresholds: {
+      warning: 0.7,
+      critical: 0.9
+    },
+    sectorSpecific: [
+      { id: 'seismic', name: 'Seismic Activity', icon: 'Activity', unit: 'Hz', color: '#dc2626', sectorId: 'mine1-sector-1', mineId: 'mine1' },
+      { id: 'seismic', name: 'Seismic Activity', icon: 'Activity', unit: 'Hz', color: '#dc2626', sectorId: 'mine1-sector-2', mineId: 'mine1' },
+      { id: 'seismic', name: 'Seismic Activity', icon: 'Activity', unit: 'Hz', color: '#dc2626', sectorId: 'mine1-sector-3', mineId: 'mine1' },
+      { id: 'seismic', name: 'Seismic Activity', icon: 'Activity', unit: 'Hz', color: '#dc2626', sectorId: 'mine2-sector-1', mineId: 'mine2' },
+      { id: 'seismic', name: 'Seismic Activity', icon: 'Activity', unit: 'Hz', color: '#dc2626', sectorId: 'mine2-sector-2', mineId: 'mine2' },
+      { id: 'seismic', name: 'Seismic Activity', icon: 'Activity', unit: 'Hz', color: '#dc2626', sectorId: 'mine2-sector-3', mineId: 'mine2' },
+      { id: 'seismic', name: 'Seismic Activity', icon: 'Activity', unit: 'Hz', color: '#dc2626', sectorId: 'mine3-sector-1', mineId: 'mine3' },
+      { id: 'seismic', name: 'Seismic Activity', icon: 'Activity', unit: 'Hz', color: '#dc2626', sectorId: 'mine3-sector-2', mineId: 'mine3' },
+      { id: 'seismic', name: 'Seismic Activity', icon: 'Activity', unit: 'Hz', color: '#dc2626', sectorId: 'mine3-sector-3', mineId: 'mine3' },
+      { id: 'seismic', name: 'Seismic Activity', icon: 'Activity', unit: 'Hz', color: '#dc2626', sectorId: 'mine4-sector-1', mineId: 'mine4' },
+      { id: 'seismic', name: 'Seismic Activity', icon: 'Activity', unit: 'Hz', color: '#dc2626', sectorId: 'mine4-sector-2', mineId: 'mine4' },
+      { id: 'seismic', name: 'Seismic Activity', icon: 'Activity', unit: 'Hz', color: '#dc2626', sectorId: 'mine4-sector-3', mineId: 'mine4' }
+    ]
+  },
+  {
+    id: 'strain',
+    name: 'Structural Strain',
+    icon: 'Mountain',
+    unit: 'MPa',
+    color: '#10b981',
+    thresholds: {
+      warning: 2.5,
+      critical: 3
+    },
+    sectorSpecific: [
+      { id: 'strain', name: 'Structural Strain', icon: 'Mountain', unit: 'MPa', color: '#10b981', sectorId: 'mine1-sector-1', mineId: 'mine1' },
+      { id: 'strain', name: 'Structural Strain', icon: 'Mountain', unit: 'MPa', color: '#10b981', sectorId: 'mine1-sector-2', mineId: 'mine1' },
+      { id: 'strain', name: 'Structural Strain', icon: 'Mountain', unit: 'MPa', color: '#10b981', sectorId: 'mine1-sector-3', mineId: 'mine1' },
+      { id: 'strain', name: 'Structural Strain', icon: 'Mountain', unit: 'MPa', color: '#10b981', sectorId: 'mine2-sector-1', mineId: 'mine2' },
+      { id: 'strain', name: 'Structural Strain', icon: 'Mountain', unit: 'MPa', color: '#10b981', sectorId: 'mine2-sector-2', mineId: 'mine2' },
+      { id: 'strain', name: 'Structural Strain', icon: 'Mountain', unit: 'MPa', color: '#10b981', sectorId: 'mine2-sector-3', mineId: 'mine2' },
+      { id: 'strain', name: 'Structural Strain', icon: 'Mountain', unit: 'MPa', color: '#10b981', sectorId: 'mine3-sector-1', mineId: 'mine3' },
+      { id: 'strain', name: 'Structural Strain', icon: 'Mountain', unit: 'MPa', color: '#10b981', sectorId: 'mine3-sector-2', mineId: 'mine3' },
+      { id: 'strain', name: 'Structural Strain', icon: 'Mountain', unit: 'MPa', color: '#10b981', sectorId: 'mine3-sector-3', mineId: 'mine3' },
+      { id: 'strain', name: 'Structural Strain', icon: 'Mountain', unit: 'MPa', color: '#10b981', sectorId: 'mine4-sector-1', mineId: 'mine4' },
+      { id: 'strain', name: 'Structural Strain', icon: 'Mountain', unit: 'MPa', color: '#10b981', sectorId: 'mine4-sector-2', mineId: 'mine4' },
+      { id: 'strain', name: 'Structural Strain', icon: 'Mountain', unit: 'MPa', color: '#10b981', sectorId: 'mine4-sector-3', mineId: 'mine4' }
+    ]
+  }
+];
+
+export const sectorLabels = {
+  'all': 'All Sectors',
+  'mine1-sector-1': 'North Shaft - Sector A',
+  'mine1-sector-2': 'North Shaft - Sector B',
+  'mine1-sector-3': 'North Shaft - Sector C',
+  'mine2-sector-1': 'Deep Core - Sector A',
+  'mine2-sector-2': 'Deep Core - Sector B',
+  'mine2-sector-3': 'Deep Core - Sector C',
+  'mine3-sector-1': 'Eastern Tunnel - Sector A',
+  'mine3-sector-2': 'Eastern Tunnel - Sector B',
+  'mine3-sector-3': 'Eastern Tunnel - Sector C',
+  'mine4-sector-1': 'Kigali Tunnel - Sector A',
+  'mine4-sector-2': 'Kigali Tunnel - Sector B',
+  'mine4-sector-3': 'Kigali Tunnel - Sector C'
 };
