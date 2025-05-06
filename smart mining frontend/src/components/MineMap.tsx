@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-le
 import { AlertTriangle, User, Activity } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { mockMines, mockSensorData } from '../data/mockData';
 
 // Fix for default marker icons in React-Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -14,6 +15,7 @@ L.Icon.Default.mergeOptions({
 
 interface MineMapProps {
   mineId: string;
+  selectedSector: string;
   width?: number;
   height?: number;
 }
@@ -38,91 +40,63 @@ function LocationUpdater({ onLocationUpdate }: { onLocationUpdate: (lat: number,
   return null;
 }
 
-// Mine locations with additional data
-const mineLocations: Record<string, {
-  lat: number;
-  lng: number;
-  name: string;
-  radius: number;
-  depth: number;
-  sensors: Array<{
-    type: string;
-    location: string;
-    status: 'normal' | 'warning' | 'danger';
-  }>;
-  personnel: number;
-}> = {
-  'mine1': {
-    lat: 51.5074,
-    lng: -0.1278,
-    name: 'North Shaft Mine',
-    radius: 500,
-    depth: 450,
-    sensors: [
-      { type: 'gas', location: 'Main Shaft', status: 'normal' },
-      { type: 'temperature', location: 'Level 1', status: 'warning' },
-      { type: 'seismic', location: 'Deep Level', status: 'normal' }
-    ],
-    personnel: 24
-  },
-  'mine2': {
-    lat: 51.5174,
-    lng: -0.1378,
-    name: 'Deep Core Mine',
-    radius: 750,
-    depth: 800,
-    sensors: [
-      { type: 'gas', location: 'Ventilation Shaft', status: 'danger' },
-      { type: 'temperature', location: 'Level 2', status: 'normal' },
-      { type: 'seismic', location: 'Core Area', status: 'warning' }
-    ],
-    personnel: 32
-  },
-  'mine3': {
-    lat: 51.5274,
-    lng: -0.1478,
-    name: 'Eastern Tunnel',
-    radius: 300,
-    depth: 250,
-    sensors: [
-      { type: 'gas', location: 'Main Tunnel', status: 'normal' },
-      { type: 'temperature', location: 'Work Face', status: 'normal' },
-      { type: 'seismic', location: 'Support Area', status: 'normal' }
-    ],
-    personnel: 18
-  }
-};
-
-export function MineMap({ mineId }: MineMapProps) {
+export function MineMap({ mineId, selectedSector }: MineMapProps) {
   const [currentLocation, setCurrentLocation] = useState<[number, number] | null>(null);
-  const mineLocation = mineLocations[mineId] || mineLocations['mine1'];
+  const mine = mockMines.find(m => m.id === mineId) || mockMines[0];
+  const sensorData = mockSensorData[mineId] || [];
 
-  const getStatusColor = (status: 'normal' | 'warning' | 'danger') => {
+  // Update the filtering logic to handle 'all' sectors case
+  const filteredSensorData = selectedSector 
+    ? sensorData.filter(sensor => sensor.sectorId === selectedSector)
+    : sensorData;
+
+  // Group sensors by type and get their status
+  const sensorsByType = filteredSensorData.reduce((acc, sensor) => {
+    if (!acc[sensor.type]) {
+      acc[sensor.type] = {
+        type: sensor.type,
+        location: sensor.location,
+        status: sensor.status
+      };
+    } else if (sensor.status === 'warning' || sensor.status === 'critical') {
+      // Prioritize warning/critical status
+      acc[sensor.type].status = sensor.status;
+    }
+    return acc;
+  }, {} as Record<string, { type: string; location: string; status: string }>);
+
+  const sensors = Object.values(sensorsByType);
+
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'normal':
         return '#10B981';
       case 'warning':
         return '#F59E0B';
-      case 'danger':
+      case 'critical':
         return '#EF4444';
       default:
         return '#10B981';
     }
   };
 
+  // Find the selected sector object
+  const currentSector = mine.sectors.find(s => s.id === selectedSector);
+
   return (
     <div className="bg-white p-4 rounded-lg">
       <div className="mb-4">
-        <h3 className="font-semibold text-lg">{mineLocation.name} Overview</h3>
+        <h3 className="font-semibold text-lg">{mine.name} Overview</h3>
         <div className="text-sm text-gray-500 mt-1">
-          Depth: {mineLocation.depth}m | Active Personnel: {mineLocation.personnel}
+          Depth: {mine.depth}m | Active Personnel: {filteredSensorData.length}
+          {currentSector && ` | ${currentSector.name}`}
         </div>
       </div>
 
       {/* Live GPS Map */}
       <div className="h-96 rounded-lg overflow-hidden border mb-4">
         <MapContainer
-          center={[mineLocation.lat, mineLocation.lng]}
+          center={[mine.coordinates.lat, mine.coordinates.lng]}
           zoom={14}
           style={{ height: '100%', width: '100%' }}
         >
@@ -133,8 +107,8 @@ export function MineMap({ mineId }: MineMapProps) {
           
           {/* Mine operation area */}
           <Circle
-            center={[mineLocation.lat, mineLocation.lng]}
-            radius={mineLocation.radius}
+            center={[mine.coordinates.lat, mine.coordinates.lng]}
+            radius={500} // Using a default radius of 500m
             pathOptions={{
               color: '#2563EB',
               fillColor: '#3B82F6',
@@ -143,20 +117,25 @@ export function MineMap({ mineId }: MineMapProps) {
           >
             <Popup>
               <div className="p-2">
-                <h4 className="font-semibold">{mineLocation.name}</h4>
+                <h4 className="font-semibold">{mine.name}</h4>
                 <p className="text-sm text-gray-600">Operational Area</p>
-                <p className="text-sm text-gray-600">Radius: {mineLocation.radius}m</p>
+                <p className="text-sm text-gray-600">Status: {mine.status}</p>
               </div>
             </Popup>
           </Circle>
 
           {/* Mine center marker */}
-          <Marker position={[mineLocation.lat, mineLocation.lng]}>
+          <Marker position={[mine.coordinates.lat, mine.coordinates.lng]}>
             <Popup>
               <div className="p-2">
-                <h4 className="font-semibold">{mineLocation.name}</h4>
-                <p className="text-sm text-gray-600">Depth: {mineLocation.depth}m</p>
-                <p className="text-sm text-gray-600">Personnel: {mineLocation.personnel}</p>
+                <h4 className="font-semibold">{mine.name}</h4>
+                <p className="text-sm text-gray-600">Depth: {mine.depth}m</p>
+                <p className="text-sm text-gray-600">Status: {mine.status}</p>
+                {currentSector && (
+                  <p className="text-sm text-gray-600">
+                    Sector: {currentSector.name}
+                  </p>
+                )}
               </div>
             </Popup>
           </Marker>
@@ -182,7 +161,7 @@ export function MineMap({ mineId }: MineMapProps) {
 
       {/* Sensor Status Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {mineLocation.sensors.map((sensor, index) => (
+        {sensors.map((sensor, index) => (
           <div
             key={index}
             className="p-4 rounded-lg border"

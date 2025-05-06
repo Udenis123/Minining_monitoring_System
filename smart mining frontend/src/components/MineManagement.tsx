@@ -16,6 +16,7 @@ export function MineManagement() {
   const [newMine, setNewMine] = useState({
     name: '',
     location: '',
+    status: 'active' as 'active' | 'maintenance' | 'emergency',
     areaNumber: '',
     coordinates: {
       lat: '',
@@ -28,8 +29,9 @@ export function MineManagement() {
 
   const [newSector, setNewSector] = useState({
     name: '',
-    level: 1,
-    status: 'active' as const
+    status: 'active' as 'active' | 'maintenance' | 'emergency',
+    sensors: [] as SensorConfig[],
+    id: ''
   });
 
   const [newSensor, setNewSensor] = useState({
@@ -49,10 +51,49 @@ export function MineManagement() {
 
   const handleAddMine = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!newMine.name || !newMine.location || !newMine.status || 
+        !newMine.areaNumber || !newMine.coordinates.lat || 
+        !newMine.coordinates.lng || !newMine.depth) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    // Validate coordinates format
+    const lat = parseFloat(newMine.coordinates.lat);
+    const lng = parseFloat(newMine.coordinates.lng);
+    if (isNaN(lat) || isNaN(lng)) {
+      alert('Please enter valid coordinates');
+      return;
+    }
+
+    // Validate depth is a positive number
+    const depth = parseFloat(newMine.depth);
+    if (isNaN(depth) || depth <= 0) {
+      alert('Please enter a valid depth');
+      return;
+    }
+
+    // Create new mine object with proper types
+    const newMineData = {
+      ...newMine,
+      id: `mine${Date.now()}`, // Generate a unique ID
+      coordinates: {
+        lat: parseFloat(newMine.coordinates.lat),
+        lng: parseFloat(newMine.coordinates.lng)
+      },
+      depth: parseFloat(newMine.depth),
+      sectors: [] // Initialize with empty sectors array
+    };
+
+    // Here you would typically make an API call to save the new mine
+    // For now, we'll just close the modal and reset the form
     setShowAddModal(false);
     setNewMine({
       name: '',
       location: '',
+      status: 'active',
       areaNumber: '',
       coordinates: { lat: '', lng: '' },
       depth: '',
@@ -63,11 +104,28 @@ export function MineManagement() {
 
   const handleAddSector = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate required fields
+    if (!newSector.name || !newSector.status) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    // Create new sector object with proper types
+    const newSectorData = {
+      ...newSector,
+      id: `sector-${Date.now()}`, // Generate a unique ID
+      sensors: [] // Initialize with empty sensors array
+    };
+
+    // Here you would typically make an API call to save the new sector
+    // For now, we'll just close the modal and reset the form
     setShowAddSectorModal(false);
     setNewSector({
       name: '',
-      level: 1,
-      status: 'active'
+      status: 'active',
+      sensors: [],
+      id: ''
     });
   };
 
@@ -89,7 +147,7 @@ export function MineManagement() {
 
   const handleManageClick = (mine: Mine) => {
     setSelectedMine(mine);
-    setSelectedSector('all');
+    setSelectedSector(mine.sectors.length > 0 ? mine.sectors[0].id : '');
     setShowDetailsModal(true);
   };
 
@@ -275,6 +333,22 @@ export function MineManagement() {
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={newMine.status}
+                      onChange={e => setNewMine(prev => ({ ...prev, status: e.target.value as 'active' | 'maintenance' | 'emergency' }))}
+                      className="w-full p-2 border rounded-md"
+                      required
+                    >
+                      <option value="active">Active</option>
+                      <option value="maintenance">Maintenance</option>
+                      <option value="emergency">Emergency</option>
+                    </select>
+                  </div>
+
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Description
@@ -318,18 +392,23 @@ export function MineManagement() {
                   <p className="text-gray-500">Area #{selectedMine.areaNumber} - {selectedMine.location}</p>
                 </div>
                 <div className="flex items-center gap-4">
-                  <select
-                    value={selectedSector}
-                    onChange={(e) => setSelectedSector(e.target.value)}
-                    className="px-4 py-2 border rounded-lg bg-white"
-                  >
-                    <option value="all">All Sectors</option>
-                    {selectedMine.sectors.map(sector => (
-                      <option key={sector.id} value={sector.id}>
-                        {sector.name} (Level {sector.level})
-                      </option>
-                    ))}
-                  </select>
+                <select
+                      value={selectedSector}
+                      onChange={(e) => setSelectedSector(e.target.value)}
+                      className="px-4 py-2 border rounded-lg bg-white"
+                    >
+                      {selectedMine.sectors.length > 0 ? (
+                        <>
+                          {selectedMine.sectors.map(sector => (
+                            <option key={sector.id} value={sector.id}>
+                              {sector.name} (Level {sector.level})
+                            </option>
+                          ))}
+                        </>
+                      ) : (
+                        <option value="">No sectors available</option>
+                      )}
+                    </select> 
                   <button
                     onClick={() => setShowAddSectorModal(true)}
                     className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 flex items-center"
@@ -346,7 +425,7 @@ export function MineManagement() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 <div className="lg:col-span-2">
                   <div className="bg-white border rounded-lg overflow-hidden">
-                    <MineMap mineId={selectedMine.id} width={16} height={10} />
+                    <MineMap mineId={selectedMine.id} selectedSector={selectedSector} />
                   </div>
                 </div>
 
@@ -455,31 +534,34 @@ export function MineManagement() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Level
-                    </label>
-                    <input
-                      type="number"
-                      value={newSector.level}
-                      onChange={e => setNewSector(prev => ({ ...prev, level: parseInt(e.target.value) }))}
-                      className="w-full p-2 border rounded-md"
-                      min="1"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Status
                     </label>
                     <select
                       value={newSector.status}
                       onChange={e => setNewSector(prev => ({ ...prev, status: e.target.value as 'active' | 'maintenance' | 'emergency' }))}
                       className="w-full p-2 border rounded-md"
+                      required
                     >
                       <option value="active">Active</option>
                       <option value="maintenance">Maintenance</option>
                       <option value="emergency">Emergency</option>
                     </select>
+                  </div>
+
+                  {/* Initial Sensors Section */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Initial Sensors
+                    </label>
+                    <div className="bg-gray-50 p-4 rounded-md">
+                      <p className="text-sm text-gray-500 mb-2">
+                        Sensors can be added to this sector after creation using the "Add Sensor" button in the sector details.
+                      </p>
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Activity className="w-4 h-4 mr-2" />
+                        <span>Sensors will be initialized as an empty array</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
