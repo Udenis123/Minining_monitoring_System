@@ -28,19 +28,19 @@ export function Sidebar() {
     },
     {
       icon: Mountain,
-      label: "Mines",
+      label: "Mine Sites",
       href: "/mines",
       permission: "view_all_mines" as const,
     },
     {
       icon: Users,
-      label: "Users",
+      label: "User Management",
       href: "/users",
       permission: "manage_users" as const,
     },
     {
       icon: Activity,
-      label: "Monitoring",
+      label: "Sensors Monitor",
       href: "/monitoring",
       permission: "view_sensors" as const,
     },
@@ -48,13 +48,7 @@ export function Sidebar() {
       icon: Brain,
       label: "Predictive Data",
       href: "/predictive",
-      permission: "view_sensors" as const,
-    },
-    {
-      icon: Bell,
-      label: "Alerts",
-      href: "/alerts",
-      permission: "view_alerts" as const,
+      permission: "view_predective_data" as const,
     },
     {
       icon: FileText,
