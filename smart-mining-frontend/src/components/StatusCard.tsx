@@ -1,33 +1,45 @@
-import React from 'react';
-import { AlertTriangle, CheckCircle, XCircle, DivideIcon as LucideIcon } from 'lucide-react';
+import React from "react";
+import {
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  DivideIcon as LucideIcon,
+} from "lucide-react";
+import type { LucideIcon as LucideIconType } from "lucide-react";
 
 interface StatusCardProps {
   title: string;
   value: string | number;
-  status: 'normal' | 'warning' | 'critical';
-  trend?: 'up' | 'down';
-  icon?: LucideIcon;
+  status: "normal" | "warning" | "critical";
+  trend?: "up" | "down";
+  icon?: LucideIconType;
 }
 
-export function StatusCard({ title, value, status, trend, icon: Icon }: StatusCardProps) {
+export function StatusCard({
+  title,
+  value,
+  status,
+  trend,
+  icon: Icon,
+}: StatusCardProps) {
   const statusConfig = {
     normal: {
       icon: CheckCircle,
-      color: 'text-green-500',
-      bg: 'bg-green-50',
-      border: 'border-green-100'
+      color: "text-green-500",
+      bg: "bg-green-50",
+      border: "border-green-100",
     },
     warning: {
       icon: AlertTriangle,
-      color: 'text-yellow-500',
-      bg: 'bg-yellow-50',
-      border: 'border-yellow-100'
+      color: "text-yellow-500",
+      bg: "bg-yellow-50",
+      border: "border-yellow-100",
     },
     critical: {
       icon: XCircle,
-      color: 'text-red-500',
-      bg: 'bg-red-50',
-      border: 'border-red-100'
+      color: "text-red-500",
+      bg: "bg-red-50",
+      border: "border-red-100",
     },
   };
 

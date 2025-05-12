@@ -331,13 +331,13 @@ const mockSectorAccess: SectorAccess[] = [
   }
 ];
 
-export const mockUsers: User[] = [
+ export const mockUsers: User[] = [
   {
     id: 'admin1',
     email: 'admin@mine.com',
     name: 'Admin User',
     role: 'admin',
-    permissions: ['view_all_mines', 'manage_users', 'manage_sensors', 'manage_alerts', 'manage_reports', 'view_reports', 'view_sensors'],
+    permissions: ['view_all_mines', 'manage_users', 'manage_sensors', 'manage_alerts', 'view_reports', 'view_sensors'],
     sectorAccess: [],
     password: 'admin123',
   },
