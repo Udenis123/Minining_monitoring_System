@@ -10,6 +10,22 @@ export interface SensorData {
   sectorId: string;
 }
 
+export interface TimeSeriesDataPoint {
+  time: Date;
+  value: number;
+  status?: 'normal' | 'warning' | 'critical';
+}
+
+export interface TimeSeriesData {
+  sensorId: string;
+  sensorType: 'gas' | 'geological' | 'temperature' | 'seismic' | 'strain';
+  unit: string;
+  mineId: string;
+  sectorId: string;
+  hourlyData: TimeSeriesDataPoint[];
+  minuteData: TimeSeriesDataPoint[];
+}
+
 export interface MinerData {
   id: string;
   name: string;

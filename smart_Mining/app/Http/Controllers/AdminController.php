@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
@@ -17,15 +18,23 @@ class AdminController extends Controller
     // Get all users
     public function getAllUsers()
     {
-        $users = User::all();
-        return response()->json($users);
+        return response()->json([
+            'message' => 'This is a test response',
+            'users' => [
+                [
+                    'id' => 1,
+                    'name' => 'Test User',
+                    'email' => 'test@example.com'
+                ]
+            ]
+        ]);
     }
 
     // Get pending approvals
     public function getPendingApprovals()
     {
         $users = User::where('is_approved', false)->get();
-        return response()->json($users);
+        return response()->json(['users' => $users]);
     }
 
     // Approve user
@@ -60,8 +69,16 @@ class AdminController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', Password::defaults()],
             'role' => ['required', 'string', 'in:admin,manager,user'],
-            'is_approved' => ['boolean']
+            'is_approved' => ['nullable', 'boolean']
         ]);
+
+        // Check if the role exists
+        $role = Role::where('slug', $validated['role'])->first();
+        if (!$role) {
+            return response()->json([
+                'message' => 'Invalid role specified'
+            ], 422);
+        }
 
         $user = User::create([
             'name' => $validated['name'],
@@ -74,7 +91,13 @@ class AdminController extends Controller
 
         return response()->json([
             'message' => 'User created successfully',
-            'user' => $user
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'is_approved' => $user->is_approved
+            ]
         ], 201);
     }
 
@@ -85,13 +108,26 @@ class AdminController extends Controller
             'role' => ['required', 'string', 'in:admin,manager,user']
         ]);
 
+        // Check if the role exists
+        $role = Role::where('slug', $validated['role'])->first();
+        if (!$role) {
+            return response()->json([
+                'message' => 'Invalid role specified'
+            ], 422);
+        }
+
         $user = User::findOrFail($id);
         $user->role = $validated['role'];
         $user->save();
 
         return response()->json([
             'message' => 'User role updated successfully',
-            'user' => $user
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role
+            ]
         ]);
     }
 }

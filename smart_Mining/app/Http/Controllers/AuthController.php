@@ -29,6 +29,8 @@ class AuthController extends Controller
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
+                'role' => 'user', // Default role
+                'is_approved' => false, // Default to not approved
             ]);
 
             try {
@@ -40,14 +42,18 @@ class AuthController extends Controller
                 // Don't expose the error to the user, but log it
             }
 
-            $token = $user->createToken('auth_token')->plainTextToken;
-
-            return response()->json('Registration successful! Please check your email for verification link.', 201);
+            return response()->json([
+                'message' => 'Registration successful! Please check your email for verification link.',
+                'user' => [
+                    'name' => $user->name,
+                    'email' => $user->email
+                ]
+            ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json($e->errors(), 422);
         } catch (\Exception $e) {
             Log::error('Registration error: ' . $e->getMessage());
-            return response()->json('An error occurred during registration. Please try again.', 500);
+            return response()->json(['message' => 'An error occurred during registration. Please try again.'], 500);
         }
     }
 
@@ -59,19 +65,32 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (!Auth::attempt($validated)) {
-            return response()->json('Invalid login credentials', 401);
+        if (!Auth::guard('web')->attempt($validated)) {
+            return response()->json(['message' => 'Invalid login credentials'], 401);
         }
 
         $user = User::where('email', $validated['email'])->first();
 
         if (!$user->hasVerifiedEmail()) {
-            return response()->json('Please verify your email address first. Check your email for the verification link.', 403);
+            return response()->json(['message' => 'Please verify your email address first. Check your email for the verification link.'], 403);
+        }
+
+        if (!$user->is_approved) {
+            return response()->json(['message' => 'Your account is pending approval by an administrator.'], 403);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        return response()->json('Logged in successfully');
+        return response()->json([
+            'message' => 'Logged in successfully',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ],
+            'token' => $token
+        ]);
     }
 
     // Logout
@@ -79,12 +98,23 @@ class AuthController extends Controller
     {
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json('Logged out successfully');
+        return response()->json(['message' => 'Logged out successfully']);
     }
 
     public function user(Request $request)
     {
-        return response()->json($request->user());
+        $user = $request->user();
+
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'is_approved' => $user->is_approved,
+                'email_verified_at' => $user->email_verified_at
+            ]
+        ]);
     }
 
     public function verifyEmail(Request $request)
@@ -134,5 +164,67 @@ class AuthController extends Controller
             Log::error('Resend verification email error: ' . $e->getMessage());
             return response()->json('Failed to resend verification email. Please try again later.', 500);
         }
+    }
+
+    /**
+     * Check if a user has a specific permission
+     */
+    public function checkPermission(Request $request)
+    {
+        $validated = $request->validate([
+            'permission' => ['required', 'string']
+        ]);
+
+        $hasPermission = $request->user()->hasPermission($validated['permission']);
+
+        return response()->json([
+            'permission' => $validated['permission'],
+            'has_permission' => $hasPermission
+        ]);
+    }
+
+    /**
+     * Check if a user has a specific role
+     */
+    public function checkRole(Request $request)
+    {
+        $validated = $request->validate([
+            'role' => ['required', 'string']
+        ]);
+
+        $hasRole = $request->user()->hasRole($validated['role']);
+
+        return response()->json([
+            'role' => $validated['role'],
+            'has_role' => $hasRole
+        ]);
+    }
+
+    /**
+     * Get user permissions
+     */
+    public function getUserPermissions(Request $request)
+    {
+        $user = $request->user();
+
+        // If admin, return all permissions
+        if ($user->isAdmin()) {
+            $permissions = \App\Models\Permission::all();
+            return response()->json([
+                'permissions' => $permissions
+            ]);
+        }
+
+        // Otherwise get permissions from user's role
+        $role = \App\Models\Role::where('slug', $user->role)->first();
+        if (!$role) {
+            return response()->json([
+                'permissions' => []
+            ]);
+        }
+
+        return response()->json([
+            'permissions' => $role->permissions
+        ]);
     }
 }
