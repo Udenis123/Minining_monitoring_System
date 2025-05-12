@@ -1,10 +1,10 @@
 export interface SensorData {
   id: string;
-  type: 'gas' | 'geological' | 'temperature' | 'seismic' | 'strain';
+  type: "gas" | "geological" | "temperature" | "seismic" | "strain";
   value: number;
   unit: string;
   timestamp: Date;
-  status: 'normal' | 'warning' | 'critical';
+  status: "normal" | "warning" | "critical";
   location: string;
   mineId: string;
   sectorId: string;
@@ -13,12 +13,12 @@ export interface SensorData {
 export interface TimeSeriesDataPoint {
   time: Date;
   value: number;
-  status?: 'normal' | 'warning' | 'critical';
+  status?: "normal" | "warning" | "critical";
 }
 
 export interface TimeSeriesData {
   sensorId: string;
-  sensorType: 'gas' | 'geological' | 'temperature' | 'seismic' | 'strain';
+  sensorType: "gas" | "geological" | "temperature" | "seismic" | "strain";
   unit: string;
   mineId: string;
   sectorId: string;
@@ -31,7 +31,7 @@ export interface MinerData {
   name: string;
   role: string;
   location: string;
-  status: 'active' | 'inactive' | 'emergency';
+  status: "active" | "inactive" | "emergency";
   lastUpdate: Date;
   mineId: string;
   sectorId: string;
@@ -39,7 +39,7 @@ export interface MinerData {
 
 export interface Alert {
   id: string;
-  type: 'info' | 'warning' | 'critical';
+  type: "info" | "warning" | "critical";
   message: string;
   timestamp: Date;
   location: string;
@@ -52,7 +52,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'supervisor' | 'analyst' | 'miner';
+  role: "admin" | "supervisor" | "analyst" | "miner";
   mineId?: string;
   permissions: Permission[];
   sectorAccess: SectorAccess[];
@@ -69,7 +69,7 @@ export interface Mine {
   id: string;
   name: string;
   location: string;
-  status: 'active' | 'maintenance' | 'emergency';
+  status: "active" | "maintenance" | "emergency";
   areaNumber: string;
   coordinates: {
     lat: number;
@@ -84,19 +84,19 @@ export interface Sector {
   id: string;
   name: string;
   level: number;
-  status: 'active' | 'maintenance' | 'emergency';
+  status: "active" | "maintenance" | "emergency";
   sensors: SensorConfig[];
 }
 
 export interface SensorConfig {
   id: string;
-  type: 'gas' | 'geological' | 'temperature' | 'seismic' | 'strain';
+  type: "gas" | "geological" | "temperature" | "seismic" | "strain";
   location: string;
   coordinates: {
     lat: number;
     lng: number;
   };
-  status: 'active' | 'inactive' | 'maintenance';
+  status: "active" | "inactive" | "maintenance";
   installationDate: Date;
   lastCalibration: Date;
   specifications: {
@@ -107,24 +107,22 @@ export interface SensorConfig {
   };
 }
 
-export type Permission = 
-  | 'view_all_mines'
-  | 'manage_users'
-  | 'view_sensors'
-  | 'manage_sensors'
-  | 'view_alerts'
-  | 'manage_alerts'
-  | 'view_reports'
-  | 'manage_reports';
+export type Permission =
+  | "view_all_mines"
+  | "manage_users"
+  | "view_sensors"
+  | "manage_sensors"
+  | "view_reports"
+  | "view_predective_data";
 
 export type SectorPermission =
-  | 'view_sector'
-  | 'manage_sector'
-  | 'view_sector_sensors'
-  | 'manage_sector_sensors'
-  | 'view_sector_alerts'
-  | 'manage_sector_alerts'
-  | 'view_sector_reports';
+  | "view_sector"
+  | "manage_sector"
+  | "view_sector_sensors"
+  | "manage_sector_sensors"
+  | "view_sector_alerts"
+  | "manage_sector_alerts"
+  | "view_sector_reports";
 
 export interface Role {
   name: string;
