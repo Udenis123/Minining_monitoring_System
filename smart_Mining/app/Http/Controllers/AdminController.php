@@ -18,15 +18,23 @@ class AdminController extends Controller
     // Get all users
     public function getAllUsers()
     {
+        $users = User::with('role.permissions')->get();
+
         return response()->json([
-            'message' => 'This is a test response',
-            'users' => [
-                [
-                    'id' => 1,
-                    'name' => 'Test User',
-                    'email' => 'test@example.com'
-                ]
-            ]
+            'users' => $users->map(function($user) {
+                $role = Role::where('slug', $user->role)->first();
+                $permissions = $role ? $role->permissions->pluck('slug')->toArray() : [];
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'is_approved' => $user->is_approved,
+                    'email_verified_at' => $user->email_verified_at,
+                    'permissions' => $permissions
+                ];
+            })
         ]);
     }
 
@@ -68,18 +76,11 @@ class AdminController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', Password::defaults()],
-            'role' => ['required', 'string', 'in:admin,manager,user'],
+            'role' => ['required', 'string', 'exists:roles,slug'],
             'is_approved' => ['nullable', 'boolean']
         ]);
 
-        // Check if the role exists
-        $role = Role::where('slug', $validated['role'])->first();
-        if (!$role) {
-            return response()->json([
-                'message' => 'Invalid role specified'
-            ], 422);
-        }
-
+        // Create the user
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
@@ -89,6 +90,9 @@ class AdminController extends Controller
             'email_verified_at' => now() // Auto verify email for admin-created users
         ]);
 
+        // Get the role with its permissions
+        $role = Role::with('permissions')->where('slug', $validated['role'])->first();
+
         return response()->json([
             'message' => 'User created successfully',
             'user' => [
@@ -96,7 +100,8 @@ class AdminController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
-                'is_approved' => $user->is_approved
+                'is_approved' => $user->is_approved,
+                'permissions' => $role->permissions
             ]
         ], 201);
     }
@@ -105,20 +110,16 @@ class AdminController extends Controller
     public function updateUserRole(Request $request, $id)
     {
         $validated = $request->validate([
-            'role' => ['required', 'string', 'in:admin,manager,user']
+            'role' => ['required', 'string', 'exists:roles,slug']
         ]);
-
-        // Check if the role exists
-        $role = Role::where('slug', $validated['role'])->first();
-        if (!$role) {
-            return response()->json([
-                'message' => 'Invalid role specified'
-            ], 422);
-        }
 
         $user = User::findOrFail($id);
         $user->role = $validated['role'];
         $user->save();
+
+        // Get the role with its permissions
+        $role = Role::with('permissions')->where('slug', $validated['role'])->first();
+        $permissions = $role ? $role->permissions->pluck('slug')->toArray() : [];
 
         return response()->json([
             'message' => 'User role updated successfully',
@@ -126,7 +127,8 @@ class AdminController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'role' => $user->role
+                'role' => $user->role,
+                'permissions' => $permissions
             ]
         ]);
     }
