@@ -18,6 +18,12 @@ class AuthController extends Controller
     // Register
     public function register(Request $request)
     {
+        // Disable public registration
+        return response()->json([
+            'message' => 'Public registration is disabled. Please contact an administrator to create an account.'
+        ], 403);
+
+        /* Old code removed - only admin can create users now
         try {
             $validated = $request->validate([
                 'name' => ['required', 'string', 'max:255'],
@@ -55,6 +61,7 @@ class AuthController extends Controller
             Log::error('Registration error: ' . $e->getMessage());
             return response()->json(['message' => 'An error occurred during registration. Please try again.'], 500);
         }
+        */
     }
 
     // Login
@@ -81,6 +88,47 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // Get user permissions
+        $permissions = [];
+
+        // Map Laravel permissions to frontend expected format
+        $permissionMap = [
+            'view-dashboard' => 'view_dashboard',
+            'view-mining-map' => 'view_all_mines',
+            'view-sensor-data' => 'view_sensors',
+            'manage-sensors' => 'manage_sensors',
+            'view-reports' => 'view_reports',
+            'generate-reports' => 'generate_reports',
+            'manage-users' => 'manage_users',
+            'manage-roles' => 'manage_roles',
+            'view-alerts' => 'view_alerts',
+            'manage-alerts' => 'manage_alerts',
+        ];
+
+        if ($user->isAdmin()) {
+            // Admin gets additional permissions matching frontend expectations
+            $permissions = [
+                'view_all_mines',
+                'manage_users',
+                'view_reports',
+                'view_sensors',
+                'view_predective_data'
+            ];
+        } else {
+            // Get permissions from user's role
+            $role = \App\Models\Role::where('slug', $user->role)->first();
+            if ($role) {
+                $backendPermissions = $role->permissions->pluck('slug')->toArray();
+
+                // Map backend permissions to frontend format
+                foreach ($backendPermissions as $permission) {
+                    if (isset($permissionMap[$permission])) {
+                        $permissions[] = $permissionMap[$permission];
+                    }
+                }
+            }
+        }
+
         return response()->json([
             'message' => 'Logged in successfully',
             'user' => [
@@ -88,6 +136,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
+                'permissions' => $permissions
             ],
             'token' => $token
         ]);
@@ -105,6 +154,47 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
+        // Get user permissions
+        $permissions = [];
+
+        // Map Laravel permissions to frontend expected format
+        $permissionMap = [
+            'view-dashboard' => 'view_dashboard',
+            'view-mining-map' => 'view_all_mines',
+            'view-sensor-data' => 'view_sensors',
+            'manage-sensors' => 'manage_sensors',
+            'view-reports' => 'view_reports',
+            'generate-reports' => 'generate_reports',
+            'manage-users' => 'manage_users',
+            'manage-roles' => 'manage_roles',
+            'view-alerts' => 'view_alerts',
+            'manage-alerts' => 'manage_alerts',
+        ];
+
+        if ($user->isAdmin()) {
+            // Admin gets additional permissions matching frontend expectations
+            $permissions = [
+                'view_all_mines',
+                'manage_users',
+                'view_reports',
+                'view_sensors',
+                'view_predective_data'
+            ];
+        } else {
+            // Get permissions from user's role
+            $role = \App\Models\Role::where('slug', $user->role)->first();
+            if ($role) {
+                $backendPermissions = $role->permissions->pluck('slug')->toArray();
+
+                // Map backend permissions to frontend format
+                foreach ($backendPermissions as $permission) {
+                    if (isset($permissionMap[$permission])) {
+                        $permissions[] = $permissionMap[$permission];
+                    }
+                }
+            }
+        }
+
         return response()->json([
             'user' => [
                 'id' => $user->id,
@@ -112,7 +202,7 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'is_approved' => $user->is_approved,
-                'email_verified_at' => $user->email_verified_at
+                'permissions' => $permissions
             ]
         ]);
     }
@@ -175,10 +265,47 @@ class AuthController extends Controller
             'permission' => ['required', 'string']
         ]);
 
-        $hasPermission = $request->user()->hasPermission($validated['permission']);
+        $frontendPermission = $validated['permission'];
+
+        // Map frontend permission to backend permission
+        $permissionMap = [
+            'view_dashboard' => 'view-dashboard',
+            'view_all_mines' => 'view-mining-map',
+            'view_sensors' => 'view-sensor-data',
+            'manage_sensors' => 'manage-sensors',
+            'view_reports' => 'view-reports',
+            'generate_reports' => 'generate-reports',
+            'manage_users' => 'manage-users',
+            'manage_roles' => 'manage-roles',
+            'view_alerts' => 'view-alerts',
+            'manage_alerts' => 'manage-alerts',
+        ];
+
+        // If admin, they have access to everything
+        if ($request->user()->isAdmin()) {
+            return response()->json([
+                'permission' => $frontendPermission,
+                'has_permission' => true
+            ]);
+        }
+
+        // If it's a special frontend permission that doesn't map directly
+        if (!isset($permissionMap[$frontendPermission])) {
+            // Special handling for admin-only permissions
+            if (in_array($frontendPermission, ['view_predective_data'])) {
+                return response()->json([
+                    'permission' => $frontendPermission,
+                    'has_permission' => false // Only admin has these permissions
+                ]);
+            }
+        }
+
+        // For permissions that have a backend mapping
+        $backendPermission = $permissionMap[$frontendPermission] ?? $frontendPermission;
+        $hasPermission = $request->user()->hasPermission($backendPermission);
 
         return response()->json([
-            'permission' => $validated['permission'],
+            'permission' => $frontendPermission,
             'has_permission' => $hasPermission
         ]);
     }
@@ -207,11 +334,30 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        // If admin, return all permissions
+        // Map Laravel permissions to frontend expected format
+        $permissionMap = [
+            'view-dashboard' => 'view_dashboard',
+            'view-mining-map' => 'view_all_mines',
+            'view-sensor-data' => 'view_sensors',
+            'manage-sensors' => 'manage_sensors',
+            'view-reports' => 'view_reports',
+            'generate-reports' => 'generate_reports',
+            'manage-users' => 'manage_users',
+            'manage-roles' => 'manage_roles',
+            'view-alerts' => 'view_alerts',
+            'manage-alerts' => 'manage_alerts',
+        ];
+
+        // If admin, return frontend-style admin permissions
         if ($user->isAdmin()) {
-            $permissions = \App\Models\Permission::all();
             return response()->json([
-                'permissions' => $permissions
+                'permissions' => [
+                    'view_all_mines',
+                    'manage_users',
+                    'view_reports',
+                    'view_sensors',
+                    'view_predective_data'
+                ]
             ]);
         }
 
@@ -223,8 +369,18 @@ class AuthController extends Controller
             ]);
         }
 
+        $backendPermissions = $role->permissions->pluck('slug')->toArray();
+        $frontendPermissions = [];
+
+        // Map backend permissions to frontend format
+        foreach ($backendPermissions as $permission) {
+            if (isset($permissionMap[$permission])) {
+                $frontendPermissions[] = $permissionMap[$permission];
+            }
+        }
+
         return response()->json([
-            'permissions' => $role->permissions
+            'permissions' => $frontendPermissions
         ]);
     }
 }
