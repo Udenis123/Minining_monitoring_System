@@ -2,14 +2,12 @@
 
 namespace App\Models;
 
-use App\Models\Role;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 
-class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
@@ -23,8 +21,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
-        'role',
-        'is_approved',
+        'role_id',
     ];
 
     /**
@@ -45,53 +42,57 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
-        'is_approved' => 'boolean',
     ];
 
     /**
-     * Check if user is an admin
-     *
-     * @return bool
+     * Get the role that owns the user
+     */
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    /**
+     * Get all permissions for the user via their role
+     */
+    public function permissions()
+    {
+        if ($this->role) {
+            return $this->role->permissions()->pluck('permission_name')->toArray();
+        }
+        return [];
+    }
+
+    /**
+     * Check if user is an admin - keeping for backward compatibility
      */
     public function isAdmin()
     {
-        return $this->role === 'admin';
+        if ($this->role) {
+            return $this->role->role_name === 'admin';
+        }
+        return false;
     }
 
     /**
      * Check if user has a specific role
-     *
-     * @param string $role
-     * @return bool
      */
-    public function hasRole($role)
+    public function hasRole($roleName)
     {
-        if (is_string($role)) {
-            return $this->role === $role;
+        if ($this->role) {
+            return $this->role->role_name === $roleName;
         }
-
-        return in_array($this->role, $role);
+        return false;
     }
 
     /**
-     * Check if user has a specific permission through their role
-     *
-     * @param string $permission
-     * @return bool
+     * Check if user has a specific permission
      */
-    public function hasPermission($permission)
+    public function hasPermission($permissionName)
     {
-        // Admin has all permissions
-        if ($this->isAdmin()) {
-            return true;
+        if ($this->role) {
+            return $this->role->permissions->contains('permission_name', $permissionName);
         }
-
-        // Get user's role from the database
-        $roleModel = Role::where('slug', $this->role)->first();
-        if (!$roleModel) {
-            return false;
-        }
-
-        return $roleModel->hasPermission($permission);
+        return false;
     }
 }

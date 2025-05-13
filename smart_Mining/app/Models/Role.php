@@ -10,21 +10,11 @@ class Role extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name',
-        'slug',
-        'description'
+        'role_name',
     ];
 
     /**
-     * The permissions that belong to the role.
-     */
-    public function permissions()
-    {
-        return $this->belongsToMany(Permission::class);
-    }
-
-    /**
-     * The users that belong to the role.
+     * The users that belong to this role
      */
     public function users()
     {
@@ -32,14 +22,10 @@ class Role extends Model
     }
 
     /**
-     * Check if the role has a specific permission
+     * The permissions that belong to this role
      */
-    public function hasPermission($permission)
+    public function permissions()
     {
-        if (is_string($permission)) {
-            return $this->permissions->contains('slug', $permission);
-        }
-
-        return !!$permission->intersect($this->permissions)->count();
+        return $this->belongsToMany(Permission::class, 'role_permission');
     }
 }
