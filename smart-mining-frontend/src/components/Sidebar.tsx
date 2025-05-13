@@ -58,9 +58,24 @@ export function Sidebar() {
     },
   ];
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      // Call logout from authStore
+      await logout();
+
+      // Additional cleanup
+      localStorage.removeItem("token");
+
+      // Clear any auth-related data from localStorage
+      localStorage.removeItem("auth-storage");
+
+      // Navigate to login page
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Ensure we navigate to login even if there's an error
+      navigate("/login");
+    }
   };
 
   return (
