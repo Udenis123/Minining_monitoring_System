@@ -17,6 +17,7 @@ import { PredictiveAnalytics } from "./components/PredictiveAnalytics";
 import { LandingPage } from "./components/LandingPage";
 import { About } from "./components/About";
 import { Contact } from "./components/Contact";
+import { Unauthorized } from "./components/Unauthorized";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 
@@ -30,6 +31,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/unauthorized" element={<Unauthorized />} />
         <Route
           path="/dashboard"
           element={
@@ -65,12 +67,12 @@ function App() {
         <Route
           path="/predictive"
           element={
-            <ProtectedRoute requiredPermissions={["view_sensors"]}>
+            <ProtectedRoute requiredPermissions={["view_predective_data"]}>
               <PredictiveAnalytics />
             </ProtectedRoute>
           }
         />
-        
+
         <Route
           path="/alerts"
           element={

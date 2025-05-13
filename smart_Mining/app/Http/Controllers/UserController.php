@@ -157,4 +157,31 @@ class UserController extends Controller
             ]
         ]);
     }
+
+    /**
+     * Delete a user
+     */
+    public function deleteUser($id)
+    {
+        $user = User::findOrFail($id);
+
+        // Don't allow deleting the only admin
+        if ($user->role && $user->role->role_name === 'admin') {
+            $adminCount = User::whereHas('role', function($query) {
+                $query->where('role_name', 'admin');
+            })->count();
+
+            if ($adminCount <= 1) {
+                return response()->json([
+                    'message' => 'Cannot delete the only admin user'
+                ], 403);
+            }
+        }
+
+        $user->delete();
+
+        return response()->json([
+            'message' => 'User deleted successfully'
+        ]);
+    }
 }

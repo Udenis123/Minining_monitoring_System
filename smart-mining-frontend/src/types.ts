@@ -53,6 +53,7 @@ export interface User {
   email: string;
   name: string;
   role: "admin" | "supervisor" | "analyst" | "miner";
+  role_id?: string;
   mineId?: string;
   permissions: Permission[];
   sectorAccess: SectorAccess[];

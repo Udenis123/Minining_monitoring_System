@@ -52,27 +52,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       // Call logout API if token exists
       if (get().token) {
-        await axios.post(
-          `${API_URL}/logout`,
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${get().token}`,
-            },
-          }
-        );
+        try {
+          await axios.post(
+            `${API_URL}/logout`,
+            {},
+            {
+              headers: {
+                Authorization: `Bearer ${get().token}`,
+              },
+            }
+          );
+        } catch (logoutError) {
+          console.warn("API logout failed, continuing with local logout", logoutError);
+        }
       }
 
       // Remove token from localStorage
       localStorage.removeItem("token");
+      localStorage.removeItem("auth-storage");
 
       // Remove default header
       delete axios.defaults.headers.common["Authorization"];
 
-      set({ user: null, token: null, loading: false });
+      set({ user: null, token: null, loading: false, error: null });
     } catch (error) {
+      console.error("Logout error:", error);
       // Even if API fails, clear local state
       localStorage.removeItem("token");
+      localStorage.removeItem("auth-storage");
       delete axios.defaults.headers.common["Authorization"];
       set({ user: null, token: null, loading: false });
     }
