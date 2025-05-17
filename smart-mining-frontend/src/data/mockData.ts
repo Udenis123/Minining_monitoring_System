@@ -936,6 +936,16 @@ export const mockAlerts: Record<string, Alert[]> = {
       mineId: 'mine1',
       sectorId: 'sector-2'
     },
+    {
+      id: '2',
+      type: 'critical',
+      message: 'Elevated gas levels in Level 2',
+      timestamp: new Date(),
+      location: 'Level 2',
+      acknowledged: false,
+      mineId: 'mine1',
+      sectorId: 'sector-3'
+    },
   ],
   mine2: [
     {
