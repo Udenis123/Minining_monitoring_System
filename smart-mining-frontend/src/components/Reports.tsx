@@ -1,7 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { useAuthStore } from "../store/authStore";
-import { mockSensorData, mockAlerts, mockMiners } from "../data/mockData";
+import {
+  mockSensorData,
+  mockAlerts,
+  mockMiners,
+  mockMines,
+  sectorLabels,
+} from "../data/mockData";
 import {
   LineChart,
   Line,
@@ -22,21 +28,59 @@ import { Download, Filter, Calendar } from "lucide-react";
 export function Reports() {
   const user = useAuthStore((state) => state.user);
   console.log(user?.permissions);
-  const [selectedLocation, setSelectedLocation] = useState("all");
+
+  // Start with the first mine selected by default instead of "all"
+  const defaultMine = mockMines.length > 0 ? mockMines[0].id : "all";
+  const [selectedLocation, setSelectedLocation] = useState(defaultMine);
+
+  // Get available sectors for the selected location
+  const getAvailableSectorsForLocation = (locationId: string) => {
+    if (locationId === "all") {
+      return Object.entries(sectorLabels).map(([id, name]) => ({ id, name }));
+    }
+
+    // Find the corresponding mine
+    const selectedMine = mockMines.find((mine) => mine.id === locationId);
+    if (!selectedMine) return [];
+
+    // Get sector IDs for this mine from sectorLabels
+    return Object.entries(sectorLabels)
+      .filter(([id]) => id === "all" || id.startsWith(`${locationId}-`))
+      .map(([id, name]) => ({ id, name }));
+  };
+
+  // Function to extract the base sector ID from a combined ID (mine1-sector-1 -> sector-1)
+  const extractBaseSectorId = (fullSectorId: string) => {
+    if (fullSectorId === "all") return "all";
+    const parts = fullSectorId.split("-");
+    // If it has at least 3 parts (mine1-sector-1), extract the base sector id (sector-1)
+    if (parts.length >= 3) {
+      return `${parts[1]}-${parts[2]}`;
+    }
+    return fullSectorId; // Return as is if it doesn't match the expected format
+  };
+
+  // Get sectors for the selected location
+  const availableSectors = getAvailableSectorsForLocation(selectedLocation);
+
+  // Start with first sector for the location or "all" if there are none
+  const defaultSector =
+    availableSectors.length > 1 ? availableSectors[1].id : "all";
+  const [selectedSector, setSelectedSector] = useState(defaultSector);
+
+  // Update selected sector when location changes
+  useEffect(() => {
+    const sectors = getAvailableSectorsForLocation(selectedLocation);
+    const firstSector = sectors.length > 1 ? sectors[1].id : "all";
+    setSelectedSector(firstSector);
+  }, [selectedLocation]);
+
   const [timeRange, setTimeRange] = useState("24h");
 
+  // Get locations from mockData
   const locations = [
     { id: "all", name: "All Locations" },
-    { id: "mine1", name: "North Shaft Mine" },
-    { id: "mine2", name: "Deep Core Mine" },
-    { id: "mine3", name: "Eastern Tunnel" },
-  ];
-
-  const sectors = [
-    { id: "all", name: "All Sectors" },
-    { id: "sector1", name: "Sector A" },
-    { id: "sector2", name: "Sector B" },
-    { id: "sector3", name: "Sector C" },
+    ...mockMines.map((mine) => ({ id: mine.id, name: mine.name })),
   ];
 
   const timeRanges = [
@@ -49,17 +93,38 @@ export function Reports() {
   // Check if user has view_reports permission
   const hasViewReportsPermission = user?.permissions?.includes("view_reports");
 
-  // Get all data if user has permission
+  // Get alerts data filtered by location and sector
   const alerts = hasViewReportsPermission
     ? selectedLocation === "all"
-      ? Object.values(mockAlerts).flat()
-      : mockAlerts[selectedLocation] || []
+      ? Object.values(mockAlerts)
+          .flat()
+          .filter((alert) => {
+            if (selectedSector === "all") return true;
+            const baseSectorId = extractBaseSectorId(selectedSector);
+            return baseSectorId === alert.sectorId;
+          })
+      : (mockAlerts[selectedLocation] || []).filter((alert) => {
+          if (selectedSector === "all") return true;
+          const baseSectorId = extractBaseSectorId(selectedSector);
+          return baseSectorId === alert.sectorId;
+        })
     : [];
 
+  // Get sensor data filtered by location and sector
   const sensorData = hasViewReportsPermission
     ? selectedLocation === "all"
-      ? Object.values(mockSensorData).flat()
-      : mockSensorData[selectedLocation] || []
+      ? Object.values(mockSensorData)
+          .flat()
+          .filter((sensor) => {
+            if (selectedSector === "all") return true;
+            const baseSectorId = extractBaseSectorId(selectedSector);
+            return baseSectorId === sensor.sectorId;
+          })
+      : (mockSensorData[selectedLocation] || []).filter((sensor) => {
+          if (selectedSector === "all") return true;
+          const baseSectorId = extractBaseSectorId(selectedSector);
+          return baseSectorId === sensor.sectorId;
+        })
     : [];
 
   // Generate analytics data
@@ -101,13 +166,50 @@ export function Reports() {
         ? 720
         : 2160;
 
-    return Array.from({ length: 12 }, (_, i) => ({
-      time: `${Math.floor((i * hours) / 12)}h`,
-      gas: Math.random() * 50,
-      temperature: Math.random() * 40,
-      seismic: Math.random() * 2,
-      strain: Math.random() * 5,
-    }));
+    // Use different data points based on time range
+    const dataPoints = timeRange === "24h" ? 12 : timeRange === "7d" ? 7 : 12;
+
+    // Use selected sensor data for the chart if available
+    const gasData = sensorData.filter((s) => s.type === "gas");
+    const tempData = sensorData.filter((s) => s.type === "temperature");
+    const seismicData = sensorData.filter((s) => s.type === "seismic");
+    const strainData = sensorData.filter((s) => s.type === "strain");
+
+    return Array.from({ length: dataPoints }, (_, i) => {
+      // Calculate time label based on selected time range
+      const timeLabel =
+        timeRange === "24h"
+          ? `${Math.floor((i * 24) / dataPoints)}h`
+          : timeRange === "7d"
+          ? `Day ${i + 1}`
+          : timeRange === "30d"
+          ? `Week ${Math.floor((i * 4) / dataPoints) + 1}`
+          : `Month ${Math.floor((i * 3) / dataPoints) + 1}`;
+
+      // If we have real data, use the average values (or random if not enough data)
+      // Otherwise use random values as before
+      return {
+        time: timeLabel,
+        gas:
+          gasData.length > 0
+            ? (gasData[i % gasData.length]?.value || 0) + Math.random() * 5
+            : Math.random() * 50,
+        temperature:
+          tempData.length > 0
+            ? (tempData[i % tempData.length]?.value || 0) + Math.random() * 2
+            : Math.random() * 40,
+        seismic:
+          seismicData.length > 0
+            ? (seismicData[i % seismicData.length]?.value || 0) +
+              Math.random() * 0.1
+            : Math.random() * 2,
+        strain:
+          strainData.length > 0
+            ? (strainData[i % strainData.length]?.value || 0) +
+              Math.random() * 0.2
+            : Math.random() * 5,
+      };
+    });
   };
 
   const trendData = generateTrendData();
@@ -155,6 +257,17 @@ export function Reports() {
                 {locations.map((location) => (
                   <option key={location.id} value={location.id}>
                     {location.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedSector}
+                onChange={(e) => setSelectedSector(e.target.value)}
+                className="px-4 py-2 border rounded-lg bg-white"
+              >
+                {availableSectors.map((sector) => (
+                  <option key={sector.id} value={sector.id}>
+                    {sector.name}
                   </option>
                 ))}
               </select>
