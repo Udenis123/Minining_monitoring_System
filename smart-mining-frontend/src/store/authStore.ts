@@ -29,6 +29,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         password,
       });
       const { user, token } = response.data;
+      console.log(user);
 
       // Save token to localStorage for persistence
       localStorage.setItem("token", token);
