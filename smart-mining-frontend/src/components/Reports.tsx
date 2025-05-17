@@ -21,6 +21,7 @@ import { Download, Filter, Calendar } from "lucide-react";
 
 export function Reports() {
   const user = useAuthStore((state) => state.user);
+  console.log(user?.permissions);
   const [selectedLocation, setSelectedLocation] = useState("all");
   const [timeRange, setTimeRange] = useState("24h");
 
@@ -45,23 +46,21 @@ export function Reports() {
     { id: "90d", name: "Last 90 Days" },
   ];
 
-  // Filter data based on user's mine assignment or selected location for admin
-  const userMineId = user?.mineId;
-  const selectedMineId = user?.role === "admin" ? selectedLocation : userMineId;
+  // Check if user has view_reports permission
+  const hasViewReportsPermission = user?.permissions?.includes("view_reports");
 
-  const alerts =
-    user?.role === "admin" && selectedLocation === "all"
+  // Get all data if user has permission
+  const alerts = hasViewReportsPermission
+    ? selectedLocation === "all"
       ? Object.values(mockAlerts).flat()
-      : selectedMineId
-      ? mockAlerts[selectedMineId] || []
-      : [];
+      : mockAlerts[selectedLocation] || []
+    : [];
 
-  const sensorData =
-    user?.role === "admin" && selectedLocation === "all"
+  const sensorData = hasViewReportsPermission
+    ? selectedLocation === "all"
       ? Object.values(mockSensorData).flat()
-      : selectedMineId
-      ? mockSensorData[selectedMineId] || []
-      : [];
+      : mockSensorData[selectedLocation] || []
+    : [];
 
   // Generate analytics data
   const alertsByType = [
@@ -115,6 +114,24 @@ export function Reports() {
 
   const COLORS = ["#2563eb", "#f59e0b", "#dc2626", "#10b981"];
 
+  if (!hasViewReportsPermission) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Sidebar />
+        <div className="ml-64 p-8 flex items-center justify-center h-[calc(100vh-2rem)]">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Access Denied
+            </h1>
+            <p className="text-gray-500">
+              You don't have permission to view reports.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
@@ -130,19 +147,17 @@ export function Reports() {
               </p>
             </div>
             <div className="flex gap-4">
-              {user?.role === "admin" && (
-                <select
-                  value={selectedLocation}
-                  onChange={(e) => setSelectedLocation(e.target.value)}
-                  className="px-4 py-2 border rounded-lg bg-white"
-                >
-                  {locations.map((location) => (
-                    <option key={location.id} value={location.id}>
-                      {location.name}
-                    </option>
-                  ))}
-                </select>
-              )}
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="px-4 py-2 border rounded-lg bg-white"
+              >
+                {locations.map((location) => (
+                  <option key={location.id} value={location.id}>
+                    {location.name}
+                  </option>
+                ))}
+              </select>
               <select
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}

@@ -71,30 +71,23 @@ export function Dashboard() {
     { id: "mine4", name: "Kigali Tunnel" },
   ];
 
-  // Filter data based on user's mine assignment or selected location for admin
-  const userMineId = user?.mineId;
-  const selectedMineId = user?.role === "admin" ? selectedLocation : userMineId;
+  // Get data based on selected location, without role restrictions
+  const selectedMineId = selectedLocation;
 
   const sensorData =
-    user?.role === "admin" && selectedLocation === "all"
+    selectedLocation === "all"
       ? Object.values(mockSensorData).flat()
-      : selectedMineId
-      ? mockSensorData[selectedMineId] || []
-      : [];
+      : mockSensorData[selectedMineId] || [];
 
   const alerts =
-    user?.role === "admin" && selectedLocation === "all"
+    selectedLocation === "all"
       ? Object.values(mockAlerts).flat()
-      : selectedMineId
-      ? mockAlerts[selectedMineId] || []
-      : [];
+      : mockAlerts[selectedMineId] || [];
 
   const miners =
-    user?.role === "admin" && selectedLocation === "all"
+    selectedLocation === "all"
       ? Object.values(mockMiners).flat()
-      : selectedMineId
-      ? mockMiners[selectedMineId] || []
-      : [];
+      : mockMiners[selectedMineId] || [];
 
   // Get selected mine data for the map
   const selectedMine =
@@ -277,23 +270,19 @@ export function Dashboard() {
               <h1 className="text-2xl font-bold text-gray-900">
                 Mining Operations Dashboard
               </h1>
-              <p className="mt-1 text-gray-500">
-                Welcome, {user?.name} ({user?.role})
-              </p>
+              <p className="mt-1 text-gray-500">Welcome, {user?.name}</p>
             </div>
-            {user?.role === "admin" && (
-              <select
-                value={selectedLocation}
-                onChange={(e) => setSelectedLocation(e.target.value)}
-                className="px-4 py-2 border rounded-lg bg-white"
-              >
-                {locations.map((location) => (
-                  <option key={location.id} value={location.id}>
-                    {location.name}
-                  </option>
-                ))}
-              </select>
-            )}
+            <select
+              value={selectedLocation}
+              onChange={(e) => setSelectedLocation(e.target.value)}
+              className="px-4 py-2 border rounded-lg bg-white"
+            >
+              {locations.map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
