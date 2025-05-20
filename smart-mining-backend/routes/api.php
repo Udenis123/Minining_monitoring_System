@@ -5,6 +5,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\MineController;
+use App\Http\Controllers\SectorController;
+use App\Http\Controllers\SensorController;
 use Illuminate\Support\Facades\Mail;
 
 // Test route for debugging
@@ -38,5 +41,28 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/users/{id}', [UserController::class, 'updateUser']);
     Route::delete('/users/{id}', [UserController::class, 'deleteUser']);
     Route::put('/users/{id}/permissions', [UserController::class, 'updateUserPermissions']);
+
+    // Mine management
+    Route::prefix('mines')->group(function () {
+        Route::get('/', [MineController::class, 'getAllMines']);
+        Route::post('/', [MineController::class, 'createMine']);
+        Route::get('/{id}', [MineController::class, 'getMine']);
+        Route::put('/{id}', [MineController::class, 'updateMine']);
+        Route::delete('/{id}', [MineController::class, 'deleteMine']);
+
+        // Sector management
+        Route::get('/{mineId}/sectors', [SectorController::class, 'getSectors']);
+        Route::post('/{mineId}/sectors', [SectorController::class, 'createSector']);
+        Route::get('/{mineId}/sectors/{sectorId}', [SectorController::class, 'getSector']);
+        Route::put('/{mineId}/sectors/{sectorId}', [SectorController::class, 'updateSector']);
+        Route::delete('/{mineId}/sectors/{sectorId}', [SectorController::class, 'deleteSector']);
+
+        // Sensor management
+        Route::get('/{mineId}/sectors/{sectorId}/sensors', [SensorController::class, 'getSensors']);
+        Route::post('/{mineId}/sectors/{sectorId}/sensors', [SensorController::class, 'createSensor']);
+        Route::get('/{mineId}/sectors/{sectorId}/sensors/{sensorId}', [SensorController::class, 'getSensor']);
+        Route::put('/{mineId}/sectors/{sectorId}/sensors/{sensorId}', [SensorController::class, 'updateSensor']);
+        Route::delete('/{mineId}/sectors/{sectorId}/sensors/{sensorId}', [SensorController::class, 'deleteSensor']);
+    });
 });
 
