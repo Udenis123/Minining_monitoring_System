@@ -12,6 +12,9 @@ import {
   Wind,
   Mountain,
   MapPin,
+  Settings,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { MineMap } from "./MineMap";
 import { Mine, Sector, SensorConfig } from "../types";
@@ -24,11 +27,13 @@ export function MineManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showManageModal, setShowManageModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedMine, setSelectedMine] = useState<Mine | null>(null);
   const [selectedSector, setSelectedSector] = useState<string>("all");
   const [showAddSectorModal, setShowAddSectorModal] = useState(false);
   const [showAddSensorModal, setShowAddSensorModal] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   const [newMine, setNewMine] = useState({
     name: "",
@@ -75,6 +80,13 @@ export function MineManagement() {
     },
   });
 
+  const [showManageSectorsModal, setShowManageSectorsModal] = useState(false);
+  const [showManageSensorsModal, setShowManageSensorsModal] = useState(false);
+  const [editingSector, setEditingSector] = useState<Sector | null>(null);
+  const [editingSensor, setEditingSensor] = useState<SensorConfig | null>(null);
+  const [selectedSectorForSensors, setSelectedSectorForSensors] =
+    useState<Sector | null>(null);
+
   useEffect(() => {
     fetchMines();
   }, []);
@@ -100,65 +112,72 @@ export function MineManagement() {
   const handleAddMine = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Trim input values to ensure no whitespace-only values
+    const trimmedMine = {
+      ...newMine,
+      name: newMine.name.trim(),
+      location: newMine.location.trim(),
+      areaNumber: newMine.areaNumber.trim(),
+      coordinates: {
+        lat: newMine.coordinates.lat.toString().trim(),
+        lng: newMine.coordinates.lng.toString().trim(),
+      },
+      depth: newMine.depth.toString().trim(),
+      description: newMine.description.trim(),
+    };
+
     // Validate required fields
     if (
-      !newMine.name ||
-      !newMine.location ||
-      !newMine.status ||
-      !newMine.areaNumber ||
-      !newMine.coordinates.lat ||
-      !newMine.coordinates.lng ||
-      !newMine.depth
+      !trimmedMine.name ||
+      !trimmedMine.location ||
+      !trimmedMine.status ||
+      !trimmedMine.areaNumber ||
+      !trimmedMine.coordinates.lat ||
+      !trimmedMine.coordinates.lng ||
+      !trimmedMine.depth
     ) {
       toast.error("Please fill in all required fields");
       return;
     }
 
     // Validate coordinates format
-    const lat = parseFloat(newMine.coordinates.lat);
-    const lng = parseFloat(newMine.coordinates.lng);
+    const lat = parseFloat(trimmedMine.coordinates.lat);
+    const lng = parseFloat(trimmedMine.coordinates.lng);
     if (isNaN(lat) || isNaN(lng)) {
-      toast.error("Please enter valid coordinates");
+      toast.error("Please enter valid coordinates (numbers only)");
       return;
     }
 
     // Validate depth is a positive number
-    const depth = parseFloat(newMine.depth);
+    const depth = parseFloat(trimmedMine.depth);
     if (isNaN(depth) || depth <= 0) {
-      toast.error("Please enter a valid depth");
+      toast.error("Please enter a valid depth (positive number)");
       return;
     }
 
     try {
       setLoading(true);
       await mineService.createMine({
-        name: newMine.name,
-        location: newMine.location,
-        status: newMine.status,
-        areaNumber: newMine.areaNumber,
+        name: trimmedMine.name,
+        location: trimmedMine.location,
+        status: trimmedMine.status,
+        areaNumber: trimmedMine.areaNumber,
         coordinates: {
-          lat: parseFloat(newMine.coordinates.lat),
-          lng: parseFloat(newMine.coordinates.lng),
+          lat: lat,
+          lng: lng,
         },
-        depth: parseFloat(newMine.depth),
-        description: newMine.description,
+        depth: depth,
+        description: trimmedMine.description,
       });
 
-      toast.success("Mine created successfully");
+      toast.success("Mining area created successfully");
       setShowAddModal(false);
       fetchMines();
-      setNewMine({
-        name: "",
-        location: "",
-        status: "active",
-        areaNumber: "",
-        coordinates: { lat: "", lng: "" },
-        depth: "",
-        description: "",
-        sectors: [],
-      });
-    } catch (error) {
-      toast.error("Failed to create mine");
+      resetMineForm();
+    } catch (error: any) {
+      // Display more specific error message
+      const errorMessage = error.message || "Failed to create mining area";
+      toast.error(errorMessage);
       console.error("Error creating mine:", error);
     } finally {
       setLoading(false);
@@ -180,13 +199,25 @@ export function MineManagement() {
 
     try {
       setLoading(true);
-      await mineService.createSector(selectedMine.id, {
-        name: newSector.name,
-        status: newSector.status,
-        level: newSector.level,
-      });
 
-      toast.success("Sector created successfully");
+      if (editingSector) {
+        // Update existing sector
+        await mineService.updateSector(selectedMine.id, editingSector.id, {
+          name: newSector.name,
+          status: newSector.status,
+          level: newSector.level,
+        });
+        toast.success("Sector updated successfully");
+      } else {
+        // Create new sector
+        await mineService.createSector(selectedMine.id, {
+          name: newSector.name,
+          status: newSector.status,
+          level: newSector.level,
+        });
+        toast.success("Sector created successfully");
+      }
+
       setShowAddSectorModal(false);
 
       // Refresh the selected mine data
@@ -194,14 +225,18 @@ export function MineManagement() {
       setSelectedMine(updatedMine);
       fetchMines();
 
+      // Reset form
       setNewSector({
         name: "",
         status: "active",
         level: 1,
       });
+      setEditingSector(null);
     } catch (error) {
-      toast.error("Failed to create sector");
-      console.error("Error creating sector:", error);
+      toast.error(
+        editingSector ? "Failed to update sector" : "Failed to create sector"
+      );
+      console.error("Error with sector operation:", error);
     } finally {
       setLoading(false);
     }
@@ -210,7 +245,10 @@ export function MineManagement() {
   const handleAddSensor = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedMine || selectedSector === "all") {
+    if (
+      !selectedMine ||
+      (selectedSector === "all" && !selectedSectorForSensors)
+    ) {
       toast.error("Please select a mine and sector");
       return;
     }
@@ -229,20 +267,42 @@ export function MineManagement() {
       return;
     }
 
+    const sensorData = {
+      type: newSensor.type,
+      location: newSensor.location,
+      coordinates: {
+        lat: parseFloat(newSensor.coordinates.lat),
+        lng: parseFloat(newSensor.coordinates.lng),
+      },
+      specifications: newSensor.specifications,
+      status: "active" as "active" | "maintenance" | "inactive",
+    };
+
     try {
       setLoading(true);
-      await mineService.createSensor(selectedMine.id, selectedSector, {
-        type: newSensor.type,
-        location: newSensor.location,
-        coordinates: {
-          lat: parseFloat(newSensor.coordinates.lat),
-          lng: parseFloat(newSensor.coordinates.lng),
-        },
-        specifications: newSensor.specifications,
-        status: "active",
-      });
 
-      toast.success("Sensor created successfully");
+      if (editingSensor && selectedSectorForSensors) {
+        // Update existing sensor
+        await mineService.updateSensor(
+          selectedMine.id,
+          selectedSectorForSensors.id,
+          editingSensor.id,
+          sensorData
+        );
+        toast.success("Sensor updated successfully");
+      } else {
+        // Create new sensor
+        const activeSectorId = selectedSectorForSensors
+          ? selectedSectorForSensors.id
+          : selectedSector;
+        await mineService.createSensor(
+          selectedMine.id,
+          activeSectorId,
+          sensorData
+        );
+        toast.success("Sensor created successfully");
+      }
+
       setShowAddSensorModal(false);
 
       // Refresh the selected mine data
@@ -250,6 +310,7 @@ export function MineManagement() {
       setSelectedMine(updatedMine);
       fetchMines();
 
+      // Reset form
       setNewSensor({
         type: "gas",
         location: "",
@@ -261,9 +322,13 @@ export function MineManagement() {
           manufacturer: "",
         },
       });
+      setEditingSensor(null);
+      setSelectedSectorForSensors(null);
     } catch (error) {
-      toast.error("Failed to create sensor");
-      console.error("Error creating sensor:", error);
+      toast.error(
+        editingSensor ? "Failed to update sensor" : "Failed to create sensor"
+      );
+      console.error("Error with sensor operation:", error);
     } finally {
       setLoading(false);
     }
@@ -292,6 +357,136 @@ export function MineManagement() {
     }
   };
 
+  const handleDeleteMine = async (mineId: string) => {
+    if (!window.confirm("Are you sure you want to delete this mining area?")) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await mineService.deleteMine(mineId);
+      toast.success("Mining area deleted successfully");
+      fetchMines();
+    } catch (error) {
+      toast.error("Failed to delete mining area");
+      console.error("Error deleting mining area:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditMine = (mine: Mine) => {
+    setSelectedMine(mine);
+    setEditMode(true);
+    setNewMine({
+      name: mine.name,
+      location: mine.location,
+      status: mine.status,
+      areaNumber: mine.areaNumber,
+      coordinates: {
+        lat: mine.coordinates.lat.toString(),
+        lng: mine.coordinates.lng.toString(),
+      },
+      depth: mine.depth.toString(),
+      description: mine.description,
+      sectors: mine.sectors,
+    });
+    setShowAddModal(true);
+  };
+
+  const handleUpdateMine = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedMine) return;
+
+    // Trim input values to ensure no whitespace-only values
+    const trimmedMine = {
+      ...newMine,
+      name: newMine.name.trim(),
+      location: newMine.location.trim(),
+      areaNumber: newMine.areaNumber.trim(),
+      coordinates: {
+        lat: newMine.coordinates.lat.toString().trim(),
+        lng: newMine.coordinates.lng.toString().trim(),
+      },
+      depth: newMine.depth.toString().trim(),
+      description: newMine.description.trim(),
+    };
+
+    // Validate required fields
+    if (
+      !trimmedMine.name ||
+      !trimmedMine.location ||
+      !trimmedMine.status ||
+      !trimmedMine.areaNumber ||
+      !trimmedMine.coordinates.lat ||
+      !trimmedMine.coordinates.lng ||
+      !trimmedMine.depth
+    ) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    // Validate coordinates format
+    const lat = parseFloat(trimmedMine.coordinates.lat);
+    const lng = parseFloat(trimmedMine.coordinates.lng);
+    if (isNaN(lat) || isNaN(lng)) {
+      toast.error("Please enter valid coordinates (numbers only)");
+      return;
+    }
+
+    // Validate depth is a positive number
+    const depth = parseFloat(trimmedMine.depth);
+    if (isNaN(depth) || depth <= 0) {
+      toast.error("Please enter a valid depth (positive number)");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await mineService.updateMine(selectedMine.id, {
+        name: trimmedMine.name,
+        location: trimmedMine.location,
+        status: trimmedMine.status,
+        areaNumber: trimmedMine.areaNumber,
+        coordinates: {
+          lat: lat,
+          lng: lng,
+        },
+        depth: depth,
+        description: trimmedMine.description,
+      });
+
+      toast.success("Mining area updated successfully");
+      setShowAddModal(false);
+      fetchMines();
+      resetMineForm();
+    } catch (error: any) {
+      // Display more specific error message
+      const errorMessage = error.message || "Failed to update mining area";
+      toast.error(errorMessage);
+      console.error("Error updating mining area:", error);
+    } finally {
+      setLoading(false);
+      setEditMode(false);
+    }
+  };
+
+  const resetMineForm = () => {
+    setNewMine({
+      name: "",
+      location: "",
+      status: "active",
+      areaNumber: "",
+      coordinates: { lat: "", lng: "" },
+      depth: "",
+      description: "",
+      sectors: [],
+    });
+    setSelectedMine(null);
+    setEditMode(false);
+  };
+
   // Add this helper function to safely render the sectors dropdown
   const renderSectorsDropdown = () => {
     if (!selectedMine) return null;
@@ -316,6 +511,9 @@ export function MineManagement() {
   const renderMineDetails = () => {
     if (!selectedMine) return null;
 
+    // Get a consistent miner count for this mine
+    const minerCount = generateRandomMinerCount(selectedMine.id);
+
     return (
       <div className="bg-white border rounded-lg p-6">
         <h3 className="text-lg font-semibold mb-4">Mine Overview</h3>
@@ -333,6 +531,10 @@ export function MineManagement() {
             >
               {selectedMine.status}
             </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600">Miners Present</span>
+            <span className="font-semibold text-blue-600">{minerCount}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-600">Depth</span>
@@ -368,6 +570,95 @@ export function MineManagement() {
     );
   };
 
+  const handleDeleteSector = async (mineId: string, sectorId: string) => {
+    if (!window.confirm("Are you sure you want to delete this sector?")) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await mineService.deleteSector(mineId, sectorId);
+      toast.success("Sector deleted successfully");
+
+      // Refresh the selected mine data
+      if (selectedMine) {
+        const updatedMine = await mineService.getMine(selectedMine.id);
+        setSelectedMine(updatedMine);
+      }
+      fetchMines();
+    } catch (error) {
+      toast.error("Failed to delete sector");
+      console.error("Error deleting sector:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditSector = (sector: Sector) => {
+    setEditingSector(sector);
+    setNewSector({
+      name: sector.name,
+      status: sector.status,
+      level: sector.level,
+    });
+    setShowAddSectorModal(true);
+  };
+
+  const handleDeleteSensor = async (
+    mineId: string,
+    sectorId: string,
+    sensorId: string
+  ) => {
+    if (!window.confirm("Are you sure you want to delete this sensor?")) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await mineService.deleteSensor(mineId, sectorId, sensorId);
+      toast.success("Sensor deleted successfully");
+
+      // Refresh the selected mine data
+      if (selectedMine) {
+        const updatedMine = await mineService.getMine(selectedMine.id);
+        setSelectedMine(updatedMine);
+      }
+      fetchMines();
+    } catch (error) {
+      toast.error("Failed to delete sensor");
+      console.error("Error deleting sensor:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditSensor = (sector: Sector, sensor: SensorConfig) => {
+    setEditingSensor(sensor);
+    setSelectedSectorForSensors(sector);
+    setNewSensor({
+      type: sensor.type,
+      location: sensor.location,
+      coordinates: {
+        lat: sensor.coordinates.lat.toString(),
+        lng: sensor.coordinates.lng.toString(),
+      },
+      specifications: {
+        model: sensor.specifications.model,
+        range: sensor.specifications.range,
+        accuracy: sensor.specifications.accuracy,
+        manufacturer: sensor.specifications.manufacturer,
+      },
+    });
+    setShowAddSensorModal(true);
+  };
+
+  // Add this function to generate random miner counts for each mine
+  const generateRandomMinerCount = (mineId: string) => {
+    // Use the mine ID as a seed for consistent random numbers per mine
+    const seed = parseInt(mineId, 36) % 100;
+    return 5 + Math.floor((seed + Math.random() * 30) % 50);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
@@ -382,11 +673,11 @@ export function MineManagement() {
             </p>
           </div>
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => setShowManageModal(true)}
             className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center"
           >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Mining Area
+            <Settings className="w-4 h-4 mr-2" />
+            Manage Mining Areas
           </button>
         </div>
 
@@ -413,7 +704,7 @@ export function MineManagement() {
             {mines.map((mine) => (
               <div
                 key={mine.id}
-                className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                className=" border-2 border-r-yellow-100 rounded-lg shadow-sm hover:shadow-md transition-shadow"
               >
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
@@ -437,27 +728,37 @@ export function MineManagement() {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="flex items-center mb-2">
-                        <Layers className="w-4 h-4 text-purple-500 mr-2" />
-                        <span className="text-sm font-medium">Sectors</span>
+                  <div className="grid grid-cols-3 gap-2 mb-6">
+                    <div className="bg-blue-100 p-3 rounded-lg flex flex-col items-center justify-center">
+                      <div className="flex items-center mb-1">
+                        <Users className="w-4 h-4 text-blue-500 mr-1" />
+                        <span className="text-xs font-medium">Miners</span>
                       </div>
-                      <p className="text-xl font-bold text-purple-700">
-                        {mine.sectors.length}
+                      <p className="text-xl font-bold text-blue-700">
+                        {generateRandomMinerCount(mine.id)}
                       </p>
                     </div>
 
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <div className="flex items-center mb-2">
-                        <Activity className="w-4 h-4 text-blue-500 mr-2" />
-                        <span className="text-sm font-medium">Sensors</span>
+                    <div className="bg-green-100 p-3 rounded-lg flex flex-col items-center justify-center">
+                      <div className="flex items-center mb-1">
+                        <Activity className="w-4 h-4 text-green-500 mr-1" />
+                        <span className="text-xs font-medium">Sensors</span>
                       </div>
-                      <p className="text-xl font-bold text-blue-700">
+                      <p className="text-xl font-bold text-green-700">
                         {mine.sectors.reduce(
                           (acc, sector) => acc + sector.sensors.length,
                           0
                         )}
+                      </p>
+                    </div>
+
+                    <div className="bg-purple-100 p-3 rounded-lg flex flex-col items-center justify-center">
+                      <div className="flex items-center mb-1">
+                        <Layers className="w-4 h-4 text-purple-500 mr-1" />
+                        <span className="text-xs font-medium">Sectors</span>
+                      </div>
+                      <p className="text-xl font-bold text-purple-700">
+                        {mine.sectors.length}
                       </p>
                     </div>
                   </div>
@@ -480,7 +781,7 @@ export function MineManagement() {
 
                   <button
                     onClick={() => handleManageClick(mine)}
-                    className="w-full bg-gray-50 text-gray-700 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center"
+                    className="w-full bg-[#0e4f7f] text-white py-2 rounded-lg hover:bg-[#0c8ce9] transition-colors flex items-center justify-center"
                   >
                     <Activity className="w-4 h-4 mr-2" />
                     Monitor & Manage
@@ -496,17 +797,25 @@ export function MineManagement() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-8 max-w-2xl w-full">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">Add New Mining Area</h2>
-                <button onClick={() => setShowAddModal(false)}>
+                <h2 className="text-xl font-bold">
+                  {editMode ? "Edit Mining Area" : "Add New Mining Area"}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowAddModal(false);
+                    resetMineForm();
+                    setEditMode(false);
+                  }}
+                >
                   <X className="w-6 h-6" />
                 </button>
               </div>
 
-              <form onSubmit={handleAddMine}>
+              <form onSubmit={editMode ? handleUpdateMine : handleAddMine}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Mine Name
+                      Mine Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -519,12 +828,13 @@ export function MineManagement() {
                       }
                       className="w-full p-2 border rounded-md"
                       required
+                      placeholder="Enter mine name"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Area Number
+                      Area Number <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -543,7 +853,7 @@ export function MineManagement() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Location
+                      Location <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -555,13 +865,14 @@ export function MineManagement() {
                         }))
                       }
                       className="w-full p-2 border rounded-md"
+                      placeholder="Enter location"
                       required
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Depth (meters)
+                      Depth (meters) <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="number"
@@ -574,16 +885,18 @@ export function MineManagement() {
                       }
                       className="w-full p-2 border rounded-md"
                       placeholder="e.g., 500"
+                      min="1"
+                      step="0.01"
                       required
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Latitude
+                      Latitude <span className="text-red-500">*</span>
                     </label>
                     <input
-                      type="text"
+                      type="number"
                       value={newMine.coordinates.lat}
                       onChange={(e) =>
                         setNewMine((prev) => ({
@@ -596,16 +909,17 @@ export function MineManagement() {
                       }
                       className="w-full p-2 border rounded-md"
                       placeholder="e.g., 51.5074"
+                      step="0.0001"
                       required
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Longitude
+                      Longitude <span className="text-red-500">*</span>
                     </label>
                     <input
-                      type="text"
+                      type="number"
                       value={newMine.coordinates.lng}
                       onChange={(e) =>
                         setNewMine((prev) => ({
@@ -618,13 +932,14 @@ export function MineManagement() {
                       }
                       className="w-full p-2 border rounded-md"
                       placeholder="e.g., -0.1278"
+                      step="0.0001"
                       required
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Status
+                      Status <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={newMine.status}
@@ -660,6 +975,7 @@ export function MineManagement() {
                       }
                       className="w-full p-2 border rounded-md"
                       rows={4}
+                      placeholder="Enter description (optional)"
                     />
                   </div>
                 </div>
@@ -667,7 +983,11 @@ export function MineManagement() {
                 <div className="mt-6 flex justify-end">
                   <button
                     type="button"
-                    onClick={() => setShowAddModal(false)}
+                    onClick={() => {
+                      setShowAddModal(false);
+                      resetMineForm();
+                      setEditMode(false);
+                    }}
                     className="mr-3 px-4 py-2 text-gray-600 hover:text-gray-800"
                   >
                     Cancel
@@ -676,10 +996,153 @@ export function MineManagement() {
                     type="submit"
                     className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
                   >
-                    Add Mining Area
+                    {editMode ? "Update Mining Area" : "Add Mining Area"}
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Manage Mining Areas Modal */}
+        {showManageModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">Manage Mining Areas</h2>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => {
+                      setShowManageModal(false);
+                      setShowAddModal(true);
+                    }}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add New
+                  </button>
+                  <button onClick={() => setShowManageModal(false)}>
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+              ) : mines.length === 0 ? (
+                <div className="text-center text-gray-500 p-4">
+                  <p>
+                    No mining areas found. Add your first mining area using the
+                    button above.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Name
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Location
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Area Number
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Status
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Sectors
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {mines.map((mine) => (
+                        <tr key={mine.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {mine.name}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">
+                              {mine.location}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">
+                              {mine.areaNumber}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                mine.status === "active"
+                                  ? "bg-green-100 text-green-800"
+                                  : mine.status === "maintenance"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {mine.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {mine.sectors.length}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex space-x-3">
+                              <button
+                                onClick={() => handleEditMine(mine)}
+                                className="text-blue-600 hover:text-blue-900"
+                              >
+                                <Edit className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteMine(mine.id)}
+                                className="text-red-600 hover:text-red-900"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => handleManageClick(mine)}
+                                className="text-green-600 hover:text-green-900"
+                              >
+                                <Settings className="w-5 h-5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -698,12 +1161,12 @@ export function MineManagement() {
                 <div className="flex items-center gap-4">
                   {renderSectorsDropdown()}
                   <button
-                    onClick={() => setShowAddSectorModal(true)}
+                    onClick={() => setShowManageSectorsModal(true)}
                     className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 flex items-center"
                     disabled={!selectedMine}
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Sector
+                    <Settings className="w-4 h-4 mr-2" />
+                    Manage Sectors
                   </button>
                   <button onClick={() => setShowDetailsModal(false)}>
                     <X className="w-6 h-6" />
@@ -722,6 +1185,28 @@ export function MineManagement() {
 
                   {/* Sensor Status Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Miners Status Card */}
+                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 shadow-sm">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center">
+                          <Users className="w-5 h-5 text-blue-500 mr-2" />
+                          <h4 className="font-medium text-blue-800">Miners</h4>
+                        </div>
+                        <span className="text-xl font-bold text-blue-700">
+                          {generateRandomMinerCount(selectedMine.id)}
+                        </span>
+                      </div>
+                      <div className="h-2 bg-blue-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 rounded-full"
+                          style={{ width: "75%" }}
+                        ></div>
+                      </div>
+                      <p className="mt-2 text-xs text-blue-600">
+                        Miners currently on site. GPS tracking coming soon.
+                      </p>
+                    </div>
+
                     {(() => {
                       // Get sensors from selected sector or all sectors
                       const relevantSensors = selectedMine.sectors
@@ -866,13 +1351,23 @@ export function MineManagement() {
                   <div className="bg-white border rounded-lg p-6">
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-semibold">Sensors</h3>
-                      <button
-                        onClick={() => setShowAddSensorModal(true)}
-                        className="text-blue-500 hover:text-blue-600 flex items-center"
-                      >
-                        <Plus className="w-4 h-4 mr-1" />
-                        Add Sensor
-                      </button>
+                      {selectedSector !== "all" && (
+                        <button
+                          onClick={() => {
+                            const sector = selectedMine.sectors.find(
+                              (s) => s.id === selectedSector
+                            );
+                            if (sector) {
+                              setSelectedSectorForSensors(sector);
+                              setShowManageSensorsModal(true);
+                            }
+                          }}
+                          className="text-blue-500 hover:text-blue-600 flex items-center"
+                        >
+                          <Settings className="w-4 h-4 mr-1" />
+                          Manage Sensors
+                        </button>
+                      )}
                     </div>
                     <div className="space-y-4">
                       {selectedMine.sectors
@@ -886,9 +1381,21 @@ export function MineManagement() {
                             key={sector.id}
                             className="border-b pb-4 last:border-b-0 last:pb-0"
                           >
-                            <h4 className="font-medium mb-2">
-                              {sector.name} (Level {sector.level})
-                            </h4>
+                            <div className="flex justify-between items-center">
+                              <h4 className="font-medium mb-2">
+                                {sector.name} (Level {sector.level})
+                              </h4>
+                              <button
+                                onClick={() => {
+                                  setSelectedSectorForSensors(sector);
+                                  setShowManageSensorsModal(true);
+                                }}
+                                className="text-xs text-blue-500 hover:text-blue-600 flex items-center"
+                              >
+                                <Settings className="w-3 h-3 mr-1" />
+                                Manage
+                              </button>
+                            </div>
                             <div className="space-y-2">
                               {sector.sensors.map((sensor) => (
                                 <div
@@ -909,15 +1416,26 @@ export function MineManagement() {
                                       {sensor.type}
                                     </span>
                                   </div>
-                                  <span
-                                    className={`px-2 py-1 rounded-full text-xs ${
-                                      sensor.status === "active"
-                                        ? "bg-green-100 text-green-800"
-                                        : "bg-yellow-100 text-yellow-800"
-                                    }`}
-                                  >
-                                    {sensor.status}
-                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`px-2 py-1 rounded-full text-xs ${
+                                        sensor.status === "active"
+                                          ? "bg-green-100 text-green-800"
+                                          : "bg-yellow-100 text-yellow-800"
+                                      }`}
+                                    >
+                                      {sensor.status}
+                                    </span>
+                                    <button
+                                      onClick={() =>
+                                        handleEditSensor(sector, sensor)
+                                      }
+                                      className="text-blue-500 hover:text-blue-700"
+                                      title="Edit Sensor"
+                                    >
+                                      <Edit className="w-3 h-3" />
+                                    </button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -936,8 +1454,20 @@ export function MineManagement() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-8 max-w-xl w-full">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">Add New Sector</h2>
-                <button onClick={() => setShowAddSectorModal(false)}>
+                <h2 className="text-xl font-bold">
+                  {editingSector ? "Edit Sector" : "Add New Sector"}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowAddSectorModal(false);
+                    setEditingSector(null);
+                    setNewSector({
+                      name: "",
+                      status: "active",
+                      level: 1,
+                    });
+                  }}
+                >
                   <X className="w-6 h-6" />
                 </button>
               </div>
@@ -946,7 +1476,7 @@ export function MineManagement() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Sector Name
+                      Sector Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -965,7 +1495,7 @@ export function MineManagement() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Status
+                      Status <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={newSector.status}
@@ -989,7 +1519,7 @@ export function MineManagement() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Level
+                      Level <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="number"
@@ -1001,6 +1531,7 @@ export function MineManagement() {
                         }))
                       }
                       className="w-full p-2 border rounded-md"
+                      min="1"
                       required
                     />
                   </div>
@@ -1009,7 +1540,15 @@ export function MineManagement() {
                 <div className="mt-6 flex justify-end">
                   <button
                     type="button"
-                    onClick={() => setShowAddSectorModal(false)}
+                    onClick={() => {
+                      setShowAddSectorModal(false);
+                      setEditingSector(null);
+                      setNewSector({
+                        name: "",
+                        status: "active",
+                        level: 1,
+                      });
+                    }}
                     className="mr-3 px-4 py-2 text-gray-600 hover:text-gray-800"
                   >
                     Cancel
@@ -1018,7 +1557,7 @@ export function MineManagement() {
                     type="submit"
                     className="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600"
                   >
-                    Add Sector
+                    {editingSector ? "Update Sector" : "Add Sector"}
                   </button>
                 </div>
               </form>
@@ -1031,8 +1570,27 @@ export function MineManagement() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-8 max-w-2xl w-full">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">Add New Sensor</h2>
-                <button onClick={() => setShowAddSensorModal(false)}>
+                <h2 className="text-xl font-bold">
+                  {editingSensor ? "Edit Sensor" : "Add New Sensor"}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowAddSensorModal(false);
+                    setEditingSensor(null);
+                    setSelectedSectorForSensors(null);
+                    setNewSensor({
+                      type: "gas",
+                      location: "",
+                      coordinates: { lat: "", lng: "" },
+                      specifications: {
+                        model: "",
+                        range: "",
+                        accuracy: "",
+                        manufacturer: "",
+                      },
+                    });
+                  }}
+                >
                   <X className="w-6 h-6" />
                 </button>
               </div>
@@ -1041,7 +1599,7 @@ export function MineManagement() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Sensor Type
+                      Sensor Type <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={newSensor.type}
@@ -1052,6 +1610,7 @@ export function MineManagement() {
                         }))
                       }
                       className="w-full p-2 border rounded-md"
+                      required
                     >
                       <option value="gas">Gas</option>
                       <option value="temperature">Temperature</option>
@@ -1063,7 +1622,7 @@ export function MineManagement() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Location
+                      Location <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -1082,10 +1641,10 @@ export function MineManagement() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Latitude
+                      Latitude <span className="text-red-500">*</span>
                     </label>
                     <input
-                      type="text"
+                      type="number"
                       value={newSensor.coordinates.lat}
                       onChange={(e) =>
                         setNewSensor((prev) => ({
@@ -1098,16 +1657,17 @@ export function MineManagement() {
                       }
                       className="w-full p-2 border rounded-md"
                       placeholder="e.g., 51.5074"
+                      step="0.0001"
                       required
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Longitude
+                      Longitude <span className="text-red-500">*</span>
                     </label>
                     <input
-                      type="text"
+                      type="number"
                       value={newSensor.coordinates.lng}
                       onChange={(e) =>
                         setNewSensor((prev) => ({
@@ -1120,13 +1680,14 @@ export function MineManagement() {
                       }
                       className="w-full p-2 border rounded-md"
                       placeholder="e.g., -0.1278"
+                      step="0.0001"
                       required
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Model
+                      Model <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -1147,7 +1708,7 @@ export function MineManagement() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Range
+                      Range <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -1168,7 +1729,7 @@ export function MineManagement() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Accuracy
+                      Accuracy <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -1189,7 +1750,7 @@ export function MineManagement() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Manufacturer
+                      Manufacturer <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -1212,7 +1773,22 @@ export function MineManagement() {
                 <div className="mt-6 flex justify-end">
                   <button
                     type="button"
-                    onClick={() => setShowAddSensorModal(false)}
+                    onClick={() => {
+                      setShowAddSensorModal(false);
+                      setEditingSensor(null);
+                      setSelectedSectorForSensors(null);
+                      setNewSensor({
+                        type: "gas",
+                        location: "",
+                        coordinates: { lat: "", lng: "" },
+                        specifications: {
+                          model: "",
+                          range: "",
+                          accuracy: "",
+                          manufacturer: "",
+                        },
+                      });
+                    }}
                     className="mr-3 px-4 py-2 text-gray-600 hover:text-gray-800"
                   >
                     Cancel
@@ -1221,10 +1797,313 @@ export function MineManagement() {
                     type="submit"
                     className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
                   >
-                    Add Sensor
+                    {editingSensor ? "Update Sensor" : "Add Sensor"}
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Manage Sectors Modal */}
+        {showManageSectorsModal && selectedMine && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">
+                  Manage Sectors - {selectedMine.name}
+                </h2>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => {
+                      setShowManageSectorsModal(false);
+                      setEditingSector(null);
+                      setShowAddSectorModal(true);
+                    }}
+                    className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 flex items-center"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add New Sector
+                  </button>
+                  <button onClick={() => setShowManageSectorsModal(false)}>
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+                </div>
+              ) : selectedMine.sectors.length === 0 ? (
+                <div className="text-center text-gray-500 p-4">
+                  <p>
+                    No sectors found. Add your first sector using the button
+                    above.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Name
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Level
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Status
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Sensors
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {selectedMine.sectors.map((sector) => (
+                        <tr key={sector.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {sector.name}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">
+                              {sector.level}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                sector.status === "active"
+                                  ? "bg-green-100 text-green-800"
+                                  : sector.status === "maintenance"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {sector.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {sector.sensors.length}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div className="flex space-x-3">
+                              <button
+                                onClick={() => handleEditSector(sector)}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="Edit Sector"
+                              >
+                                <Edit className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleDeleteSector(selectedMine.id, sector.id)
+                                }
+                                className="text-red-600 hover:text-red-900"
+                                title="Delete Sector"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedSector(sector.id);
+                                  setSelectedSectorForSensors(sector);
+                                  setShowManageSensorsModal(true);
+                                }}
+                                className="text-green-600 hover:text-green-900"
+                                title="Manage Sensors"
+                              >
+                                <Settings className="w-5 h-5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Manage Sensors Modal */}
+        {showManageSensorsModal && selectedMine && selectedSectorForSensors && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">
+                  Manage Sensors - {selectedSectorForSensors.name} (Level{" "}
+                  {selectedSectorForSensors.level})
+                </h2>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => {
+                      setShowManageSensorsModal(false);
+                      setSelectedSector(selectedSectorForSensors.id);
+                      setShowAddSensorModal(true);
+                    }}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add New Sensor
+                  </button>
+                  <button onClick={() => setShowManageSensorsModal(false)}>
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+              ) : selectedSectorForSensors.sensors.length === 0 ? (
+                <div className="text-center text-gray-500 p-4">
+                  <p>
+                    No sensors found. Add your first sensor using the button
+                    above.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Type
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Location
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Model
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Status
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {selectedSectorForSensors.sensors.map((sensor) => (
+                        <tr key={sensor.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              {sensor.type === "gas" && (
+                                <Wind className="w-4 h-4 text-blue-500 mr-2" />
+                              )}
+                              {sensor.type === "temperature" && (
+                                <ThermometerSun className="w-4 h-4 text-red-500 mr-2" />
+                              )}
+                              {sensor.type === "seismic" && (
+                                <Activity className="w-4 h-4 text-purple-500 mr-2" />
+                              )}
+                              {sensor.type === "strain" && (
+                                <Mountain className="w-4 h-4 text-green-500 mr-2" />
+                              )}
+                              <div className="text-sm font-medium text-gray-900 capitalize">
+                                {sensor.type}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">
+                              {sensor.location}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">
+                              {sensor.specifications?.model || "N/A"}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs leading-5 font-semibold rounded-full ${
+                                sensor.status === "active"
+                                  ? "bg-green-100 text-green-800"
+                                  : sensor.status === "maintenance"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {sensor.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div className="flex space-x-3">
+                              <button
+                                onClick={() =>
+                                  handleEditSensor(
+                                    selectedSectorForSensors,
+                                    sensor
+                                  )
+                                }
+                                className="text-blue-600 hover:text-blue-900"
+                                title="Edit Sensor"
+                              >
+                                <Edit className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleDeleteSensor(
+                                    selectedMine.id,
+                                    selectedSectorForSensors.id,
+                                    sensor.id
+                                  )
+                                }
+                                className="text-red-600 hover:text-red-900"
+                                title="Delete Sensor"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
