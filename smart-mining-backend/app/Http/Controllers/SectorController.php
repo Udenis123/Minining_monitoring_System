@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Mine;
 use App\Models\Sector;
+use App\Services\LogService;
 use Illuminate\Support\Facades\Validator;
 
 class SectorController extends Controller
@@ -45,19 +46,35 @@ class SectorController extends Controller
             'status' => $request->status
         ]);
 
+        // Log the create action
+        LogService::createLog(
+            'Sector',
+            $sector->id,
+            [
+                'mine_id' => $sector->mine_id,
+                'name' => $sector->name,
+                'level' => $sector->level,
+                'status' => $sector->status
+            ],
+            $request
+        );
+
         return response()->json([
             'message' => 'Sector created successfully',
             'data' => $sector
         ], 201);
     }
 
-    public function getSectors($mineId)
+    public function getSectors(Request $request, $mineId)
     {
         $mine = Mine::find($mineId);
 
         if (!$mine) {
             return response()->json(['message' => 'Mine not found'], 404);
         }
+
+        // Log the view action
+        LogService::viewLog('Sector');
 
         $sectors = Sector::where('mine_id', $mineId)
             ->with('sensors')
@@ -66,7 +83,7 @@ class SectorController extends Controller
         return response()->json(['data' => $sectors]);
     }
 
-    public function getSector($mineId, $sectorId)
+    public function getSector(Request $request, $mineId, $sectorId)
     {
         $sector = Sector::where('mine_id', $mineId)
             ->where('id', $sectorId)
@@ -76,6 +93,9 @@ class SectorController extends Controller
         if (!$sector) {
             return response()->json(['message' => 'Sector not found'], 404);
         }
+
+        // Log the view action
+        LogService::viewLog('Sector', $sectorId);
 
         return response()->json(['data' => $sector]);
     }
@@ -114,11 +134,23 @@ class SectorController extends Controller
             }
         }
 
+        // Store old values for logging
+        $oldValues = $sector->toArray();
+
         $sector->update([
             'name' => $request->name ?? $sector->name,
             'level' => $request->level ?? $sector->level,
             'status' => $request->status ?? $sector->status
         ]);
+
+        // Log the update action
+        LogService::updateLog(
+            'Sector',
+            $sector->id,
+            $oldValues,
+            $sector->toArray(),
+            $request
+        );
 
         return response()->json([
             'message' => 'Sector updated successfully',
@@ -126,7 +158,7 @@ class SectorController extends Controller
         ]);
     }
 
-    public function deleteSector($mineId, $sectorId)
+    public function deleteSector(Request $request, $mineId, $sectorId)
     {
         $sector = Sector::where('mine_id', $mineId)
             ->where('id', $sectorId)
@@ -136,7 +168,18 @@ class SectorController extends Controller
             return response()->json(['message' => 'Sector not found'], 404);
         }
 
+        // Store sector data for logging before deletion
+        $sectorData = $sector->toArray();
+
         $sector->delete();
+
+        // Log the delete action
+        LogService::deleteLog(
+            'Sector',
+            $sectorId,
+            $sectorData,
+            $request
+        );
 
         return response()->json(['message' => 'Sector deleted successfully']);
     }

@@ -18,6 +18,7 @@ import {
   updateUserPermissions,
   deleteUser,
 } from "../api/userManagement";
+import UserLogs from "./UserLogs";
 
 // Define a type for permissions that can be either string or object
 type PermissionItem = string | { id: number; permission_name: string };
@@ -533,149 +534,180 @@ export function UserManagement() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6">
-            <table className="min-w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4">Name</th>
-                  <th className="text-left py-3 px-4">Email</th>
-                  <th className="text-left py-3 px-4">Role</th>
-                  <th className="text-left py-3 px-4">Mine Assignment</th>
-                  <th className="text-left py-3 px-4">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="py-8 text-center text-gray-500">
-                      Loading users...
-                    </td>
+        {/* Show users table when not viewing logs */}
+        {!showUserLogsModal && (
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-6">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-4">Name</th>
+                    <th className="text-left py-3 px-4">Email</th>
+                    <th className="text-left py-3 px-4">Role</th>
+                    <th className="text-left py-3 px-4">Mine Assignment</th>
+                    <th className="text-left py-3 px-4">Actions</th>
                   </tr>
-                ) : error ? (
-                  <tr>
-                    <td colSpan={5} className="py-8 text-center text-red-500">
-                      {error}
-                    </td>
-                  </tr>
-                ) : users.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-8 text-center text-gray-500">
-                      No users found
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((user) => (
-                    <React.Fragment key={user.id}>
-                      <tr className="border-b">
-                        <td className="py-3 px-4">{user.name}</td>
-                        <td className="py-3 px-4">{user.email}</td>
-                        <td className="py-3 px-4 capitalize">{user.role}</td>
-                        <td className="py-3 px-4">All Mines</td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center space-x-3">
-                            <button
-                              onClick={() => toggleUserExpand(user.id)}
-                              className="text-gray-600 hover:text-gray-900"
-                            >
-                              {expandedUsers.includes(user.id) ? (
-                                <ChevronUp className="w-5 h-5" />
-                              ) : (
-                                <ChevronDown className="w-5 h-5" />
-                              )}
-                            </button>
-                            <button
-                              onClick={() => {
-                                // Ensure the user has the required properties before opening the modal
-                                // Find role_id if it's missing but role name is available
-                                let role_id = user.role_id;
-                                if (!role_id && user.role && roles.length > 0) {
-                                  const matchingRole = roles.find(
-                                    (role) => role.role_name === user.role
-                                  );
-                                  if (matchingRole) {
-                                    role_id = matchingRole.id;
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="py-8 text-center text-gray-500"
+                      >
+                        Loading users...
+                      </td>
+                    </tr>
+                  ) : error ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-red-500">
+                        {error}
+                      </td>
+                    </tr>
+                  ) : users.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="py-8 text-center text-gray-500"
+                      >
+                        No users found
+                      </td>
+                    </tr>
+                  ) : (
+                    users.map((user) => (
+                      <React.Fragment key={user.id}>
+                        <tr className="border-b">
+                          <td className="py-3 px-4">{user.name}</td>
+                          <td className="py-3 px-4">{user.email}</td>
+                          <td className="py-3 px-4 capitalize">{user.role}</td>
+                          <td className="py-3 px-4">All Mines</td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center space-x-3">
+                              <button
+                                onClick={() => toggleUserExpand(user.id)}
+                                className="text-gray-600 hover:text-gray-900"
+                              >
+                                {expandedUsers.includes(user.id) ? (
+                                  <ChevronUp className="w-5 h-5" />
+                                ) : (
+                                  <ChevronDown className="w-5 h-5" />
+                                )}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  // Ensure the user has the required properties before opening the modal
+                                  // Find role_id if it's missing but role name is available
+                                  let role_id = user.role_id;
+                                  if (
+                                    !role_id &&
+                                    user.role &&
+                                    roles.length > 0
+                                  ) {
+                                    const matchingRole = roles.find(
+                                      (role) => role.role_name === user.role
+                                    );
+                                    if (matchingRole) {
+                                      role_id = matchingRole.id;
+                                    }
                                   }
-                                }
 
-                                const userWithDefaults = {
-                                  ...user,
-                                  role_id: role_id,
-                                  permissions: user.permissions || [],
-                                  sectorAccess: user.sectorAccess || [],
-                                };
-                                setSelectedUser(userWithDefaults);
-                                setShowPermissionModal(true);
-                              }}
-                              className="text-blue-500 hover:text-blue-700"
-                            >
-                              Manage Permissions
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setNewUser({
-                                  name: user.name,
-                                  email: user.email,
-                                  role_id: user.role_id || "",
-                                  password: "",
-                                  password_confirmation: "",
-                                  permissions: user.permissions || [],
-                                  sectorAccess: user.sectorAccess || [],
-                                });
-                                setShowAddModal(true);
-                              }}
-                              className="text-green-500 hover:text-green-700"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => {
-                                setUserToDelete(user);
-                                setShowDeleteModal(true);
-                              }}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                      {expandedUsers.includes(user.id) && (
-                        <tr>
-                          <td colSpan={5} className="bg-gray-50 px-4 py-4">
-                            <div className="space-y-4">
-                              <div>
-                                <h4 className="font-medium text-gray-900 mb-2">
-                                  Global Permissions
-                                </h4>
-                                <div className="flex flex-wrap gap-2">
-                                  {user.permissions &&
-                                    user.permissions.map(
-                                      (permission: string) => (
-                                        <span
-                                          key={permission}
-                                          className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
-                                        >
-                                          {typeof permission === "string"
-                                            ? permission.replace(/_/g, " ")
-                                            : permission}
-                                        </span>
-                                      )
-                                    )}
-                                </div>
-                              </div>
+                                  const userWithDefaults = {
+                                    ...user,
+                                    role_id: role_id,
+                                    permissions: user.permissions || [],
+                                    sectorAccess: user.sectorAccess || [],
+                                  };
+                                  setSelectedUser(userWithDefaults);
+                                  setShowPermissionModal(true);
+                                }}
+                                className="text-blue-500 hover:text-blue-700"
+                              >
+                                Manage Permissions
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setNewUser({
+                                    name: user.name,
+                                    email: user.email,
+                                    role_id: user.role_id || "",
+                                    password: "",
+                                    password_confirmation: "",
+                                    permissions: user.permissions || [],
+                                    sectorAccess: user.sectorAccess || [],
+                                  });
+                                  setShowAddModal(true);
+                                }}
+                                className="text-green-500 hover:text-green-700"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setUserToDelete(user);
+                                  setShowDeleteModal(true);
+                                }}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                Delete
+                              </button>
                             </div>
                           </td>
                         </tr>
-                      )}
-                    </React.Fragment>
-                  ))
-                )}
-              </tbody>
-            </table>
+                        {expandedUsers.includes(user.id) && (
+                          <tr>
+                            <td colSpan={5} className="bg-gray-50 px-4 py-4">
+                              <div className="space-y-4">
+                                <div>
+                                  <h4 className="font-medium text-gray-900 mb-2">
+                                    Global Permissions
+                                  </h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    {user.permissions &&
+                                      user.permissions.map(
+                                        (permission: string) => (
+                                          <span
+                                            key={permission}
+                                            className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                                          >
+                                            {typeof permission === "string"
+                                              ? permission.replace(/_/g, " ")
+                                              : permission}
+                                          </span>
+                                        )
+                                      )}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Show logs when the logs modal is open */}
+        {showUserLogsModal && (
+          <div>
+            <div className="mb-4 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">
+                System Activity Logs
+              </h2>
+              <button
+                onClick={() => setShowUserLogsModal(false)}
+                className="text-gray-600 hover:text-gray-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <UserLogs />
+          </div>
+        )}
 
         {/* Add User Modal */}
         {showAddModal && (
@@ -1145,59 +1177,6 @@ export function UserManagement() {
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
-        )}
-
-        {showUserLogsModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">User Logs</h2>
-                <button onClick={() => setShowUserLogsModal(false)}>
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-              <div>
-                {/* Search and Filter Controls */}
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                  <div className="flex-1 relative">
-                    <input
-                      type="text"
-                      placeholder="Search logs..."
-                      className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      value={searchTerm}
-                      onChange={handleSearch}
-                    />
-                  </div>
-
-                  <div className="sm:w-48">
-                    <div className="relative">
-                      <select
-                        className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
-                        value={filterAction}
-                        onChange={handleFilterChange}
-                      >
-                        <option value="">All Actions</option>
-                        <option value="CREATE_USER">Create User</option>
-                        <option value="UPDATE_PERMISSIONS">
-                          Update Permissions
-                        </option>
-                        <option value="DELETE_USER">Delete User</option>
-                        <option value="VIEW_REPORTS">View Reports</option>
-                        <option value="MANAGE_SECTOR">Manage Sector</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleRefresh}
-                    className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                  >
-                    Refresh
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         )}

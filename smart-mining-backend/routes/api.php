@@ -8,6 +8,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\MineController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\SensorController;
+use App\Http\Controllers\UserLogController;
 use Illuminate\Support\Facades\Mail;
 
 // Test route for debugging
@@ -23,6 +24,9 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
 // Protected routes - require authentication
 Route::middleware('auth:sanctum')->group(function () {
+    // Auth
+    Route::post('/logout', [AuthController::class, 'logout']);
+    
     // Role management
     Route::get('/roles', [RoleController::class, 'getAllRoles']);
     Route::get('/role-names', [RoleController::class, 'getRoleNames']);
@@ -41,6 +45,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/users/{id}', [UserController::class, 'updateUser']);
     Route::delete('/users/{id}', [UserController::class, 'deleteUser']);
     Route::put('/users/{id}/permissions', [UserController::class, 'updateUserPermissions']);
+
+    // User Logs
+    Route::prefix('logs')->group(function () {
+        Route::get('/', [UserLogController::class, 'index']);
+        Route::get('/my-logs', [UserLogController::class, 'myLogs']);
+        Route::get('/action/{action}', [UserLogController::class, 'getByAction']);
+        Route::get('/entity/{entityType}/{entityId}', [UserLogController::class, 'getEntityLogs']);
+        Route::get('/summary', [UserLogController::class, 'getActivitySummary']);
+    });
 
     // Mine management
     Route::prefix('mines')->group(function () {

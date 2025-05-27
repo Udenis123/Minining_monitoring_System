@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Role;
 use App\Models\Permission;
+use App\Services\LogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -12,8 +13,11 @@ class RoleController extends Controller
     /**
      * Display a listing of all roles
      */
-    public function getAllRoles()
+    public function getAllRoles(Request $request)
     {
+        // Log the view action
+        LogService::viewLog('Role');
+        
         $roles = Role::with('permissions')->get();
         return response()->json(['roles' => $roles]);
     }
@@ -42,6 +46,17 @@ class RoleController extends Controller
         $permissions = Permission::whereIn('permission_name', $request->permissions)->get();
         $role->permissions()->attach($permissions);
 
+        // Log the create action
+        LogService::createLog(
+            'Role',
+            $role->id,
+            [
+                'role_name' => $role->role_name,
+                'permissions' => $request->permissions
+            ],
+            $request
+        );
+
         return response()->json([
             'message' => 'Role created successfully',
             'role' => $role->load('permissions')
@@ -64,11 +79,23 @@ class RoleController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        // Get old permissions for logging
+        $oldPermissions = $role->permissions()->pluck('permission_name')->toArray();
+
         // Get permission IDs
         $permissions = Permission::whereIn('permission_name', $request->permissions)->get();
 
         // Sync permissions
         $role->permissions()->sync($permissions);
+
+        // Log the update action
+        LogService::updateLog(
+            'Role',
+            $role->id,
+            ['permissions' => $oldPermissions],
+            ['permissions' => $request->permissions],
+            $request
+        );
 
         return response()->json([
             'message' => 'Role permissions updated successfully',
@@ -79,8 +106,11 @@ class RoleController extends Controller
     /**
      * Get role permissions
      */
-    public function getRolePermissions($id)
+    public function getRolePermissions(Request $request, $id)
     {
+        // Log the view action
+        LogService::viewLog('Role', $id);
+        
         $role = Role::with('permissions')->findOrFail($id);
 
         return response()->json([
@@ -102,6 +132,9 @@ class RoleController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        // Log the view action
+        LogService::viewLog('Role', $request->role_id);
+        
         $role = Role::with('users')->findOrFail($request->role_id);
 
         return response()->json([
@@ -119,8 +152,11 @@ class RoleController extends Controller
     /**
      * Get a list of role names with their IDs
      */
-    public function getRoleNames()
+    public function getRoleNames(Request $request)
     {
+        // Log the view action
+        LogService::viewLog('Role');
+        
         $roles = Role::select('id', 'role_name')->get();
         return response()->json(['roles' => $roles]);
     }
@@ -128,8 +164,11 @@ class RoleController extends Controller
     /**
      * Get a list of all permissions in the system
      */
-    public function getAllPermissions()
+    public function getAllPermissions(Request $request)
     {
+        // Log the view action
+        LogService::viewLog('Permission');
+        
         $permissions = Permission::select('id', 'permission_name')->get();
         return response()->json(['permissions' => $permissions]);
     }

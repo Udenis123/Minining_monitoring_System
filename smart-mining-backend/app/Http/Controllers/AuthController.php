@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\LogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -30,6 +31,9 @@ class AuthController extends Controller
         // Get permissions from role
         $permissions = $user->permissions();
 
+        // Log the login action
+        LogService::loginLog($request);
+
         return response()->json([
             'message' => 'Logged in successfully',
             'user' => [
@@ -40,6 +44,25 @@ class AuthController extends Controller
                 'permissions' => $permissions
             ],
             'token' => $token
+        ]);
+    }
+
+    /**
+     * Logout the user
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function logout(Request $request)
+    {
+        // Log the logout action
+        LogService::logoutLog($request);
+        
+        // Revoke the token that was used to authenticate the current request
+        $request->user()->currentAccessToken()->delete();
+        
+        return response()->json([
+            'message' => 'Logged out successfully'
         ]);
     }
 
@@ -193,6 +216,19 @@ class AuthController extends Controller
         $user->reset_password_code_expires_at = null;
 
         $user->save();
+
+        // Log the password reset
+        if (Auth::check()) {
+            LogService::log(
+                'password_reset',
+                'User',
+                $user->id,
+                'User reset their password',
+                null,
+                null,
+                $request
+            );
+        }
 
         return response()->json(['message' => 'Password has been reset successfully']);
     }

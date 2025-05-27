@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Sector;
 use App\Models\Sensor;
+use App\Services\LogService;
 use Illuminate\Support\Facades\Validator;
 
 class SensorController extends Controller
@@ -49,13 +50,21 @@ class SensorController extends Controller
             'manufacturer' => $request->specifications['manufacturer']
         ]);
 
+        // Log the create action
+        LogService::createLog(
+            'Sensor',
+            $sensor->id,
+            $sensor->toArray(),
+            $request
+        );
+
         return response()->json([
             'message' => 'Sensor created successfully',
             'data' => $sensor
         ], 201);
     }
 
-    public function getSensors($mineId, $sectorId)
+    public function getSensors(Request $request, $mineId, $sectorId)
     {
         $sector = Sector::where('mine_id', $mineId)
             ->where('id', $sectorId)
@@ -65,12 +74,15 @@ class SensorController extends Controller
             return response()->json(['message' => 'Sector not found'], 404);
         }
 
+        // Log the view action
+        LogService::viewLog('Sensor');
+
         $sensors = Sensor::where('sector_id', $sectorId)->get();
 
         return response()->json(['data' => $sensors]);
     }
 
-    public function getSensor($mineId, $sectorId, $sensorId)
+    public function getSensor(Request $request, $mineId, $sectorId, $sensorId)
     {
         $sensor = Sensor::where('sector_id', $sectorId)
             ->where('id', $sensorId)
@@ -79,6 +91,9 @@ class SensorController extends Controller
         if (!$sensor) {
             return response()->json(['message' => 'Sensor not found'], 404);
         }
+
+        // Log the view action
+        LogService::viewLog('Sensor', $sensorId);
 
         return response()->json(['data' => $sensor]);
     }
@@ -109,6 +124,9 @@ class SensorController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        // Store old values for logging
+        $oldValues = $sensor->toArray();
+
         $updateData = [
             'type' => $request->type ?? $sensor->type,
             'location' => $request->location ?? $sensor->location,
@@ -129,13 +147,22 @@ class SensorController extends Controller
 
         $sensor->update($updateData);
 
+        // Log the update action
+        LogService::updateLog(
+            'Sensor',
+            $sensor->id,
+            $oldValues,
+            $sensor->toArray(),
+            $request
+        );
+
         return response()->json([
             'message' => 'Sensor updated successfully',
             'data' => $sensor
         ]);
     }
 
-    public function deleteSensor($mineId, $sectorId, $sensorId)
+    public function deleteSensor(Request $request, $mineId, $sectorId, $sensorId)
     {
         $sensor = Sensor::where('sector_id', $sectorId)
             ->where('id', $sensorId)
@@ -145,7 +172,18 @@ class SensorController extends Controller
             return response()->json(['message' => 'Sensor not found'], 404);
         }
 
+        // Store sensor data for logging before deletion
+        $sensorData = $sensor->toArray();
+
         $sensor->delete();
+
+        // Log the delete action
+        LogService::deleteLog(
+            'Sensor',
+            $sensorId,
+            $sensorData,
+            $request
+        );
 
         return response()->json(['message' => 'Sensor deleted successfully']);
     }

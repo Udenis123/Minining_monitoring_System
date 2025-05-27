@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Mine;
+use App\Services\LogService;
 use Illuminate\Support\Facades\Validator;
 
 class MineController extends Controller
@@ -36,25 +37,39 @@ class MineController extends Controller
             'description' => $request->description
         ]);
 
+        // Log the create action
+        LogService::createLog(
+            'Mine',
+            $mine->id,
+            $mine->toArray(),
+            $request
+        );
+
         return response()->json([
             'message' => 'Mine created successfully',
             'data' => $mine
         ], 201);
     }
 
-    public function getAllMines()
+    public function getAllMines(Request $request)
     {
+        // Log the view action
+        LogService::viewLog('Mine');
+        
         $mines = Mine::with(['sectors.sensors'])->get();
         return response()->json(['data' => $mines]);
     }
 
-    public function getMine($id)
+    public function getMine(Request $request, $id)
     {
         $mine = Mine::with(['sectors.sensors'])->find($id);
 
         if (!$mine) {
             return response()->json(['message' => 'Mine not found'], 404);
         }
+
+        // Log the view action
+        LogService::viewLog('Mine', $id);
 
         return response()->json(['data' => $mine]);
     }
@@ -82,6 +97,9 @@ class MineController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        // Store old values for logging
+        $oldValues = $mine->toArray();
+
         $mine->update([
             'name' => $request->name ?? $mine->name,
             'location' => $request->location ?? $mine->location,
@@ -93,13 +111,22 @@ class MineController extends Controller
             'description' => $request->description ?? $mine->description
         ]);
 
+        // Log the update action
+        LogService::updateLog(
+            'Mine',
+            $mine->id,
+            $oldValues,
+            $mine->toArray(),
+            $request
+        );
+
         return response()->json([
             'message' => 'Mine updated successfully',
             'data' => $mine
         ]);
     }
 
-    public function deleteMine($id)
+    public function deleteMine(Request $request, $id)
     {
         $mine = Mine::find($id);
 
@@ -107,7 +134,18 @@ class MineController extends Controller
             return response()->json(['message' => 'Mine not found'], 404);
         }
 
+        // Store mine data for logging before deletion
+        $mineData = $mine->toArray();
+        
         $mine->delete();
+
+        // Log the delete action
+        LogService::deleteLog(
+            'Mine',
+            $id,
+            $mineData,
+            $request
+        );
 
         return response()->json(['message' => 'Mine deleted successfully']);
     }

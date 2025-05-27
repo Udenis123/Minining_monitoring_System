@@ -42,7 +42,7 @@ class PermissionsRolesSeeder extends Seeder
             $admin = User::create([
                 'name' => 'Admin',
                 'email' => 'admin@smartmining.com',
-                'password' => Hash::make('admin123'),
+                'password' => Hash::make('denis123'),
                 'role_id' => $adminRole->id,
                 'email_verified_at' => now()
             ]);

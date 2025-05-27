@@ -209,3 +209,119 @@ export const deleteUser = async (id) => {
     throw error;
   }
 };
+
+// User logs API functions
+export const getAllLogs = async (filters = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+
+    // Add filters to query params
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : "";
+    const response = await axios.get(
+      `${API_URL}/logs${query}`,
+      getAuthHeader()
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching logs:", error);
+    throw error;
+  }
+};
+
+export const getLogsByAction = async (action, filters = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+
+    // Add filters to query params
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : "";
+    const response = await axios.get(
+      `${API_URL}/logs/action/${action}${query}`,
+      getAuthHeader()
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching logs for action ${action}:`, error);
+    throw error;
+  }
+};
+
+export const getEntityLogs = async (entityType, entityId, filters = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+
+    // Add filters to query params
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : "";
+    const response = await axios.get(
+      `${API_URL}/logs/entity/${entityType}/${entityId}${query}`,
+      getAuthHeader()
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching logs for ${entityType} ${entityId}:`, error);
+    throw error;
+  }
+};
+
+export const getLogsSummary = async (filters = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+
+    // Add filters to query params
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : "";
+    const response = await axios.get(
+      `${API_URL}/logs/summary${query}`,
+      getAuthHeader()
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching logs summary:", error);
+    throw error;
+  }
+};
+
+export const getMyLogs = async (filters = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+
+    // Add filters to query params
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : "";
+    const response = await axios.get(
+      `${API_URL}/logs/my-logs${query}`,
+      getAuthHeader()
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching my logs:", error);
+    throw error;
+  }
+};

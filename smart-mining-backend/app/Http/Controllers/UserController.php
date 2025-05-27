@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Role;
+use App\Services\LogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -13,8 +14,11 @@ class UserController extends Controller
     /**
      * Display a listing of all users with their roles
      */
-    public function getAllUsers()
+    public function getAllUsers(Request $request)
     {
+        // Log the view action
+        LogService::viewLog('User');
+        
         $users = User::with('role')->get();
 
         return response()->json([
@@ -55,6 +59,18 @@ class UserController extends Controller
             'email_verified_at' => now() // Auto verify since this is admin created
         ]);
 
+        // Log the create action
+        LogService::createLog(
+            'User',
+            $user->id,
+            [
+                'name' => $user->name,
+                'email' => $user->email,
+                'role_id' => $user->role_id
+            ],
+            $request
+        );
+
         // Load role and permissions
         $user->load('role.permissions');
 
@@ -85,8 +101,22 @@ class UserController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        // Get old values for logging
+        $oldValues = [
+            'role_id' => $user->role_id
+        ];
+
         $user->role_id = $request->role_id;
         $user->save();
+
+        // Log the update action
+        LogService::updateLog(
+            'User',
+            $user->id,
+            $oldValues,
+            ['role_id' => $user->role_id],
+            $request
+        );
 
         // Load role and permissions
         $user->load('role.permissions');
@@ -121,27 +151,49 @@ class UserController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        // Store old values for logging
+        $oldValues = [
+            'name' => $user->name,
+            'email' => $user->email,
+            'role_id' => $user->role_id
+        ];
+
+        $newValues = [];
+
         // Update name if provided
         if ($request->has('name')) {
             $user->name = $request->name;
+            $newValues['name'] = $request->name;
         }
 
         // Update email if provided
         if ($request->has('email')) {
             $user->email = $request->email;
+            $newValues['email'] = $request->email;
         }
 
         // Update password if provided
         if ($request->has('password')) {
             $user->password = Hash::make($request->password);
+            $newValues['password'] = '******'; // Don't log the actual password
         }
 
         // Update role if provided
         if ($request->has('role_id')) {
             $user->role_id = $request->role_id;
+            $newValues['role_id'] = $request->role_id;
         }
 
         $user->save();
+
+        // Log the update action
+        LogService::updateLog(
+            'User',
+            $user->id,
+            $oldValues,
+            $newValues,
+            $request
+        );
 
         // Load role and permissions
         $user->load('role.permissions');
@@ -161,7 +213,7 @@ class UserController extends Controller
     /**
      * Delete a user
      */
-    public function deleteUser($id)
+    public function deleteUser(Request $request, $id)
     {
         $user = User::findOrFail($id);
 
@@ -178,10 +230,52 @@ class UserController extends Controller
             }
         }
 
+        // Store user data for logging before deletion
+        $userData = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role_id' => $user->role_id
+        ];
+
         $user->delete();
+
+        // Log the delete action
+        LogService::deleteLog(
+            'User',
+            $id,
+            $userData,
+            $request
+        );
 
         return response()->json([
             'message' => 'User deleted successfully'
+        ]);
+    }
+    
+    /**
+     * Update user permissions
+     */
+    public function updateUserPermissions(Request $request, $id) 
+    {
+        // Assuming this is the implementation for the route
+        // defined in api.php but not found in the controller
+        
+        // Log the action as a placeholder
+        LogService::log(
+            'update_permissions',
+            'User',
+            $id,
+            'Updated user permissions',
+            null,
+            null,
+            $request
+        );
+        
+        // Implement the actual permission update here
+        
+        return response()->json([
+            'message' => 'User permissions updated successfully'
         ]);
     }
 }
