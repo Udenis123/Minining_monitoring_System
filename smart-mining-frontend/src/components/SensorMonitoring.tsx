@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import  { useState, useEffect, useCallback, useRef } from "react";
 import { Sidebar } from "./Sidebar";
 import { useAuthStore } from "../store/authStore";
 import {
@@ -12,7 +12,7 @@ import {
 } from "recharts";
 import { Activity, ThermometerSun, Wind, Mountain, Clock } from "lucide-react";
 import mineService from "../services/mineService";
-import { Mine, Sector, SensorConfig } from "../types";
+import { Mine} from "../types";
 
 // Time range options for sensor data
 const TIME_RANGES = [

@@ -526,7 +526,6 @@ export function UserManagement() {
                 onClick={() => setShowUserLogsModal(true)}
                 className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 flex items-center"
               >
-                <Plus className="w-4 h-4 mr-2" />
                 User Logs
               </button>
             )}

@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   File,
   Settings,
+  Clock,
 } from "lucide-react";
 import {
   getAllLogs,
@@ -66,6 +67,9 @@ const UserLogs: React.FC = () => {
   const [fromDate, setFromDate] = useState<Date | null>(null);
   const [toDate, setToDate] = useState<Date | null>(null);
   const [userFilter, setUserFilter] = useState<string>("");
+
+  // State for display preferences
+  const [showExactTimestamp, setShowExactTimestamp] = useState<boolean>(true);
 
   // State for summary data
   const [summary, setSummary] = useState<LogSummary[]>([]);
@@ -201,10 +205,41 @@ const UserLogs: React.FC = () => {
     }
   };
 
-  const formatTimeAgo = (dateString: string) => {
+  // Helper function to adjust the time by adding 2 hours
+  const adjustTimeOffset = (date: Date): Date => {
+    return new Date(date.getTime() + 2 * 60 * 60 * 1000);
+  };
+
+  const formatTimeAgo = (dateString: string, exact: boolean = false) => {
     try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+      // Parse the date string from the server
+      const date = new Date(dateString);
+
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return dateString;
+      }
+
+      // Add 2 hours to compensate for timezone offset
+      const adjustedDate = adjustTimeOffset(date);
+
+      if (exact) {
+        // Format the date to a readable string
+        return adjustedDate.toLocaleString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true,
+        });
+      } else {
+        // Return relative time
+        return formatDistanceToNow(adjustedDate, { addSuffix: true });
+      }
     } catch (e) {
+      console.error("Error formatting date:", e);
       return dateString;
     }
   };
@@ -414,6 +449,21 @@ const UserLogs: React.FC = () => {
             User Activity Logs
           </h2>
           <div className="flex space-x-3">
+            <button
+              onClick={() => setShowExactTimestamp(!showExactTimestamp)}
+              className="p-2 bg-gray-50 text-gray-600 rounded-md hover:bg-gray-100 transition flex items-center"
+              title={
+                showExactTimestamp
+                  ? "Show relative times"
+                  : "Show exact timestamps"
+              }
+            >
+              {showExactTimestamp ? (
+                <Clock className="w-5 h-5" />
+              ) : (
+                <Calendar className="w-5 h-5" />
+              )}
+            </button>
             <button
               onClick={handleRefresh}
               className="p-2 bg-gray-50 text-gray-600 rounded-md hover:bg-gray-100 transition flex items-center"
@@ -630,7 +680,7 @@ const UserLogs: React.FC = () => {
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[180px]"
                   >
                     Time
                   </th>
@@ -690,8 +740,22 @@ const UserLogs: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div title={new Date(log.created_at).toLocaleString()}>
-                        {formatTimeAgo(log.created_at)}
+                      <div
+                        title={
+                          showExactTimestamp
+                            ? `Created: ${adjustTimeOffset(
+                                new Date(log.created_at)
+                              ).toLocaleString()}`
+                            : `Exact timestamp: ${adjustTimeOffset(
+                                new Date(log.created_at)
+                              ).toLocaleString()}`
+                        }
+                        className="flex items-center"
+                      >
+                        <Calendar className="h-4 w-4 mr-1 text-gray-400" />
+                        {showExactTimestamp
+                          ? formatTimeAgo(log.created_at, true)
+                          : formatTimeAgo(log.created_at)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
