@@ -51,6 +51,12 @@ export function UserManagement() {
   // Add success message state at the top of the component
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Helper function to check if the current user has a specific permission
+  const hasPermission = (permission: Permission): boolean => {
+    if (!currentUser || !currentUser.permissions) return false;
+    return currentUser.permissions.includes(permission);
+  };
+
   // When opening the permissions modal, initialize with user's current permissions
   // and find the role_id from the role name
   useEffect(() => {
@@ -497,27 +503,33 @@ export function UserManagement() {
             </p>
           </div>
           <div className="flex space-x-4">
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add User
-            </button>
-            <button
-              onClick={() => setShowCreateRoleModal(true)}
-              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 flex items-center"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Role
-            </button>
-            <button
-              onClick={() => setShowUserLogsModal(true)}
-              className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 flex items-center"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              User Logs
-            </button>
+            {hasPermission("create_user") && (
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add User
+              </button>
+            )}
+            {hasPermission("create_role") && (
+              <button
+                onClick={() => setShowCreateRoleModal(true)}
+                className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 flex items-center"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create Role
+              </button>
+            )}
+            {hasPermission("view_user_logs") && (
+              <button
+                onClick={() => setShowUserLogsModal(true)}
+                className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 flex items-center"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                User Logs
+              </button>
+            )}
           </div>
         </div>
 
@@ -593,64 +605,70 @@ export function UserManagement() {
                                   <ChevronDown className="w-5 h-5" />
                                 )}
                               </button>
-                              <button
-                                onClick={() => {
-                                  // Ensure the user has the required properties before opening the modal
-                                  // Find role_id if it's missing but role name is available
-                                  let role_id = user.role_id;
-                                  if (
-                                    !role_id &&
-                                    user.role &&
-                                    roles.length > 0
-                                  ) {
-                                    const matchingRole = roles.find(
-                                      (role) => role.role_name === user.role
-                                    );
-                                    if (matchingRole) {
-                                      role_id = matchingRole.id;
+                              {hasPermission("manage_permissions") && (
+                                <button
+                                  onClick={() => {
+                                    // Ensure the user has the required properties before opening the modal
+                                    // Find role_id if it's missing but role name is available
+                                    let role_id = user.role_id;
+                                    if (
+                                      !role_id &&
+                                      user.role &&
+                                      roles.length > 0
+                                    ) {
+                                      const matchingRole = roles.find(
+                                        (role) => role.role_name === user.role
+                                      );
+                                      if (matchingRole) {
+                                        role_id = matchingRole.id;
+                                      }
                                     }
-                                  }
 
-                                  const userWithDefaults = {
-                                    ...user,
-                                    role_id: role_id,
-                                    permissions: user.permissions || [],
-                                    sectorAccess: user.sectorAccess || [],
-                                  };
-                                  setSelectedUser(userWithDefaults);
-                                  setShowPermissionModal(true);
-                                }}
-                                className="text-blue-500 hover:text-blue-700"
-                              >
-                                Manage Permissions
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedUser(user);
-                                  setNewUser({
-                                    name: user.name,
-                                    email: user.email,
-                                    role_id: user.role_id || "",
-                                    password: "",
-                                    password_confirmation: "",
-                                    permissions: user.permissions || [],
-                                    sectorAccess: user.sectorAccess || [],
-                                  });
-                                  setShowAddModal(true);
-                                }}
-                                className="text-green-500 hover:text-green-700"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setUserToDelete(user);
-                                  setShowDeleteModal(true);
-                                }}
-                                className="text-red-500 hover:text-red-700"
-                              >
-                                Delete
-                              </button>
+                                    const userWithDefaults = {
+                                      ...user,
+                                      role_id: role_id,
+                                      permissions: user.permissions || [],
+                                      sectorAccess: user.sectorAccess || [],
+                                    };
+                                    setSelectedUser(userWithDefaults);
+                                    setShowPermissionModal(true);
+                                  }}
+                                  className="text-blue-500 hover:text-blue-700"
+                                >
+                                  Manage Permissions
+                                </button>
+                              )}
+                              {hasPermission("edit_user") && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedUser(user);
+                                    setNewUser({
+                                      name: user.name,
+                                      email: user.email,
+                                      role_id: user.role_id || "",
+                                      password: "",
+                                      password_confirmation: "",
+                                      permissions: user.permissions || [],
+                                      sectorAccess: user.sectorAccess || [],
+                                    });
+                                    setShowAddModal(true);
+                                  }}
+                                  className="text-green-500 hover:text-green-700"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                              {hasPermission("delete_user") && (
+                                <button
+                                  onClick={() => {
+                                    setUserToDelete(user);
+                                    setShowDeleteModal(true);
+                                  }}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  Delete
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

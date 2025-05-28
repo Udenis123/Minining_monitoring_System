@@ -21,7 +21,14 @@ class PermissionsRolesSeeder extends Seeder
             'manage_users',
             'view_reports',
             'view_sensors',
-            'view_predective_data'
+            'view_predective_data',
+            // User management specific permissions
+            'view_user_logs',
+            'edit_user',
+            'create_user',
+            'delete_user',
+            'create_role',
+            'manage_permissions'
         ];
 
         foreach ($permissions as $permissionName) {

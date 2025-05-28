@@ -114,7 +114,13 @@ export type Permission =
   | "view_sensors"
   | "manage_sensors"
   | "view_reports"
-  | "view_predective_data";
+  | "view_predective_data"
+  | "view_user_logs"
+  | "edit_user"
+  | "create_user"
+  | "delete_user"
+  | "create_role"
+  | "manage_permissions";
 
 export type SectorPermission =
   | "view_sector"
