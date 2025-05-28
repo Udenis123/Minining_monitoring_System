@@ -9,6 +9,7 @@ use App\Http\Controllers\MineController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\SensorController;
 use App\Http\Controllers\UserLogController;
+use App\Http\Controllers\MessageController;
 use Illuminate\Support\Facades\Mail;
 
 // Test route for debugging
@@ -26,7 +27,7 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::post('/logout', [AuthController::class, 'logout']);
-    
+
     // Role management
     Route::get('/roles', [RoleController::class, 'getAllRoles']);
     Route::get('/role-names', [RoleController::class, 'getRoleNames']);
@@ -53,6 +54,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/action/{action}', [UserLogController::class, 'getByAction']);
         Route::get('/entity/{entityType}/{entityId}', [UserLogController::class, 'getEntityLogs']);
         Route::get('/summary', [UserLogController::class, 'getActivitySummary']);
+    });
+
+    // Messaging system
+    Route::prefix('messages')->group(function () {
+        Route::get('/', [MessageController::class, 'index']);
+        Route::post('/', [MessageController::class, 'send']);
+        Route::get('/conversations', [MessageController::class, 'getConversations']);
+        Route::get('/unread-count', [MessageController::class, 'getUnreadCount']);
+        Route::get('/users', [MessageController::class, 'getUsersList']);
+        Route::put('/{id}/read', [MessageController::class, 'markAsRead']);
+        Route::put('/read-all/{userId}', [MessageController::class, 'markAllAsRead']);
+        Route::delete('/{id}', [MessageController::class, 'delete']);
     });
 
     // Mine management

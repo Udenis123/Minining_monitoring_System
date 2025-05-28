@@ -18,6 +18,7 @@ import { LandingPage } from "./components/LandingPage";
 import { About } from "./components/About";
 import { Contact } from "./components/Contact";
 import { Unauthorized } from "./components/Unauthorized";
+import { Messaging } from "./components/Messaging";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 
@@ -72,7 +73,14 @@ function App() {
             </ProtectedRoute>
           }
         />
-
+        <Route
+          path="/messages"
+          element={
+            <ProtectedRoute requiredPermissions={["access_messaging"]}>
+              <Messaging />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/alerts"
           element={

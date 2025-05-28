@@ -489,6 +489,78 @@ export function UserManagement() {
     return permissions.includes(permission);
   };
 
+  // Define messaging-related permissions
+  const messagingPermissions = [
+    "access_messaging",
+    "view_all_messages",
+    "manage_messages",
+    "delete_messages",
+    "message_all_users",
+    "send_message",
+    "read_message",
+    "send_messages",
+    "read_messages",
+    "Read Messages",
+    "Send Messages",
+  ];
+
+  // Filter function to get messaging permissions
+  const isMessagingPermission = (permission: PermissionItem): boolean => {
+    const permName =
+      typeof permission === "object" ? permission.permission_name : permission;
+
+    // Convert to lowercase for case-insensitive comparison
+    const permNameLower =
+      typeof permName === "string" ? permName.toLowerCase() : "";
+
+    // Check if it's in our list of messaging permissions
+    if (messagingPermissions.some((p) => p.toLowerCase() === permNameLower)) {
+      return true;
+    }
+
+    // Additional check for any permission containing "message" keyword
+    return (
+      permNameLower.includes("message") || permNameLower.includes("messaging")
+    );
+  };
+
+  // Filter function to get user management permissions
+  const isUserManagementPermission = (permission: PermissionItem): boolean => {
+    const permName =
+      typeof permission === "object" ? permission.permission_name : permission;
+    return [
+      "view_user_logs",
+      "edit_user",
+      "create_user",
+      "delete_user",
+      "create_role",
+      "manage_permissions",
+    ].includes(permName as string);
+  };
+
+  // Filter function to get global permissions (excluding user management and messaging)
+  const isGlobalPermission = (permission: PermissionItem): boolean => {
+    const permName =
+      typeof permission === "object" ? permission.permission_name : permission;
+    const permNameLower =
+      typeof permName === "string" ? permName.toLowerCase() : "";
+
+    // Check if it's a user management permission
+    if (isUserManagementPermission(permission)) {
+      return false;
+    }
+
+    // Check if it's a messaging permission - using our enhanced detection
+    if (
+      permNameLower.includes("message") ||
+      permNameLower.includes("messaging")
+    ) {
+      return false;
+    }
+
+    return true;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
@@ -691,6 +763,17 @@ export function UserManagement() {
                                               "delete_user",
                                               "create_role",
                                               "manage_permissions",
+                                              "access_messaging",
+                                              "view_all_messages",
+                                              "manage_messages",
+                                              "delete_messages",
+                                              "message_all_users",
+                                              "send_message",
+                                              "read_message",
+                                              "send_messages",
+                                              "read_messages",
+                                              "Read Messages",
+                                              "Send Messages",
                                             ].includes(permission)
                                         )
                                         .map((permission: string) => (
@@ -703,6 +786,39 @@ export function UserManagement() {
                                               : permission}
                                           </span>
                                         ))}
+                                  </div>
+                                </div>
+                                <div>
+                                  <h4 className="font-medium text-gray-900 mb-2">
+                                    Messaging Permissions
+                                  </h4>
+
+                                  <div className="flex flex-wrap gap-2">
+                                    {user.permissions &&
+                                      user.permissions
+                                        .filter((permission: string) =>
+                                          messagingPermissions.includes(
+                                            permission
+                                          )
+                                        )
+                                        .map((permission: string) => (
+                                          <span
+                                            key={permission}
+                                            className="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded-full"
+                                          >
+                                            {typeof permission === "string"
+                                              ? permission.replace(/_/g, " ")
+                                              : permission}
+                                          </span>
+                                        ))}
+                                    {!user.permissions ||
+                                      (!user.permissions.some((p: string) =>
+                                        messagingPermissions.includes(p)
+                                      ) && (
+                                        <span className="text-gray-500 text-xs italic">
+                                          No messaging permissions
+                                        </span>
+                                      ))}
                                   </div>
                                 </div>
                                 <div>
@@ -946,20 +1062,7 @@ export function UserManagement() {
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {availablePermissions
-                      .filter((permission) => {
-                        const permName =
-                          typeof permission === "object"
-                            ? permission.permission_name
-                            : permission;
-                        return ![
-                          "view_user_logs",
-                          "edit_user",
-                          "create_user",
-                          "delete_user",
-                          "create_role",
-                          "manage_permissions",
-                        ].includes(permName);
-                      })
+                      .filter(isGlobalPermission)
                       .map((permission) => (
                         <label
                           key={
@@ -997,24 +1100,51 @@ export function UserManagement() {
 
                 <div>
                   <h3 className="text-lg font-medium mb-3">
+                    Messaging Permissions
+                  </h3>
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {availablePermissions
+                      .filter(isMessagingPermission)
+                      .map((permission) => (
+                        <label
+                          key={
+                            typeof permission === "object"
+                              ? permission.id
+                              : permission
+                          }
+                          className="flex items-center space-x-2 p-2 bg-indigo-50 rounded"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={updatedPermissions.includes(
+                              typeof permission === "object"
+                                ? permission.permission_name
+                                : permission
+                            )}
+                            onChange={() => handlePermissionChange(permission)}
+                            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span className="text-sm capitalize">
+                            {typeof permission === "object" &&
+                            permission.permission_name
+                              ? permission.permission_name.replace(/_/g, " ")
+                              : typeof permission === "string"
+                              ? permission.replace(/_/g, " ")
+                              : String(permission)}
+                          </span>
+                        </label>
+                      ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-medium mb-3">
                     User Management Permissions
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {availablePermissions
-                      .filter((permission) => {
-                        const permName =
-                          typeof permission === "object"
-                            ? permission.permission_name
-                            : permission;
-                        return [
-                          "view_user_logs",
-                          "edit_user",
-                          "create_user",
-                          "delete_user",
-                          "create_role",
-                          "manage_permissions",
-                        ].includes(permName);
-                      })
+                      .filter(isUserManagementPermission)
                       .map((permission) => (
                         <label
                           key={
@@ -1163,26 +1293,14 @@ export function UserManagement() {
                       required
                     />
                   </div>
+
                   <div>
                     <h3 className="text-lg font-medium mb-3">
                       Global Permissions
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {availablePermissions
-                        .filter((permission) => {
-                          const permName =
-                            typeof permission === "object"
-                              ? permission.permission_name
-                              : permission;
-                          return ![
-                            "view_user_logs",
-                            "edit_user",
-                            "create_user",
-                            "delete_user",
-                            "create_role",
-                            "manage_permissions",
-                          ].includes(permName);
-                        })
+                        .filter(isGlobalPermission)
                         .map((permission) => (
                           <label
                             key={
@@ -1237,24 +1355,71 @@ export function UserManagement() {
 
                   <div>
                     <h3 className="text-lg font-medium mb-3">
+                      Messaging Permissions
+                    </h3>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {availablePermissions
+                        .filter(isMessagingPermission)
+                        .map((permission) => (
+                          <label
+                            key={
+                              typeof permission === "object"
+                                ? permission.id
+                                : permission
+                            }
+                            className="flex items-center space-x-2 p-2 bg-indigo-50 rounded"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={permissionIncluded(
+                                newRole.permissions,
+                                permission
+                              )}
+                              onChange={() =>
+                                setNewRole((prev) => ({
+                                  ...prev,
+                                  permissions: permissionIncluded(
+                                    prev.permissions,
+                                    permission
+                                  )
+                                    ? prev.permissions.filter(
+                                        (p) =>
+                                          p !== getPermissionName(permission) &&
+                                          (typeof p !== "object" ||
+                                            (p as any).id !==
+                                              (typeof permission === "object"
+                                                ? permission.id
+                                                : null))
+                                      )
+                                    : [
+                                        ...prev.permissions,
+                                        getPermissionName(permission),
+                                      ],
+                                }))
+                              }
+                              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            <span className="text-sm capitalize">
+                              {typeof permission === "object" &&
+                              permission.permission_name
+                                ? permission.permission_name.replace(/_/g, " ")
+                                : typeof permission === "string"
+                                ? permission.replace(/_/g, " ")
+                                : String(permission)}
+                            </span>
+                          </label>
+                        ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-medium mb-3">
                       User Management Permissions
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {availablePermissions
-                        .filter((permission) => {
-                          const permName =
-                            typeof permission === "object"
-                              ? permission.permission_name
-                              : permission;
-                          return [
-                            "view_user_logs",
-                            "edit_user",
-                            "create_user",
-                            "delete_user",
-                            "create_role",
-                            "manage_permissions",
-                          ].includes(permName);
-                        })
+                        .filter(isUserManagementPermission)
                         .map((permission) => (
                           <label
                             key={

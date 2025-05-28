@@ -120,7 +120,11 @@ export type Permission =
   | "create_user"
   | "delete_user"
   | "create_role"
-  | "manage_permissions";
+  | "manage_permissions"
+  | "access_messaging"
+  | "send_messages"
+  | "read_messages"
+  | "delete_messages";
 
 export type SectorPermission =
   | "view_sector"
@@ -134,4 +138,42 @@ export type SectorPermission =
 export interface Role {
   name: string;
   permissions: string[]; // Adjust the type as needed
+}
+
+export interface Message {
+  id: number;
+  content: string;
+  sender_id: number;
+  recipient_id: number;
+  is_read: boolean;
+  read_at: string | null;
+  created_at: string;
+  updated_at: string;
+  is_mine: boolean;
+  sender?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+  recipient?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+}
+
+export interface Conversation {
+  user: {
+    id: number;
+    name: string;
+    email: string;
+  };
+  latest_message: {
+    id: number;
+    content: string;
+    sent_at: string;
+    is_read: boolean;
+    is_sender: boolean;
+  } | null;
+  unread_count: number;
 }

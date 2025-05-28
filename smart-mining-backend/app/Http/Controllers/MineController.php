@@ -55,7 +55,7 @@ class MineController extends Controller
     {
         // Log the view action
         LogService::viewLog('Mine');
-        
+
         $mines = Mine::with(['sectors.sensors'])->get();
         return response()->json(['data' => $mines]);
     }
@@ -136,7 +136,7 @@ class MineController extends Controller
 
         // Store mine data for logging before deletion
         $mineData = $mine->toArray();
-        
+
         $mine->delete();
 
         // Log the delete action

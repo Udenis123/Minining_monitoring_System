@@ -17,7 +17,7 @@ class RoleController extends Controller
     {
         // Log the view action
         LogService::viewLog('Role');
-        
+
         $roles = Role::with('permissions')->get();
         return response()->json(['roles' => $roles]);
     }
@@ -110,7 +110,7 @@ class RoleController extends Controller
     {
         // Log the view action
         LogService::viewLog('Role', $id);
-        
+
         $role = Role::with('permissions')->findOrFail($id);
 
         return response()->json([
@@ -134,7 +134,7 @@ class RoleController extends Controller
 
         // Log the view action
         LogService::viewLog('Role', $request->role_id);
-        
+
         $role = Role::with('users')->findOrFail($request->role_id);
 
         return response()->json([
@@ -156,7 +156,7 @@ class RoleController extends Controller
     {
         // Log the view action
         LogService::viewLog('Role');
-        
+
         $roles = Role::select('id', 'role_name')->get();
         return response()->json(['roles' => $roles]);
     }
@@ -168,7 +168,7 @@ class RoleController extends Controller
     {
         // Log the view action
         LogService::viewLog('Permission');
-        
+
         $permissions = Permission::select('id', 'permission_name')->get();
         return response()->json(['permissions' => $permissions]);
     }
