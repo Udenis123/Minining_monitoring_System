@@ -682,8 +682,19 @@ export function UserManagement() {
                                   </h4>
                                   <div className="flex flex-wrap gap-2">
                                     {user.permissions &&
-                                      user.permissions.map(
-                                        (permission: string) => (
+                                      user.permissions
+                                        .filter(
+                                          (permission: string) =>
+                                            ![
+                                              "view_user_logs",
+                                              "edit_user",
+                                              "create_user",
+                                              "delete_user",
+                                              "create_role",
+                                              "manage_permissions",
+                                            ].includes(permission)
+                                        )
+                                        .map((permission: string) => (
                                           <span
                                             key={permission}
                                             className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
@@ -692,8 +703,36 @@ export function UserManagement() {
                                               ? permission.replace(/_/g, " ")
                                               : permission}
                                           </span>
+                                        ))}
+                                  </div>
+                                </div>
+                                <div>
+                                  <h4 className="font-medium text-gray-900 mb-2">
+                                    User Management Permissions
+                                  </h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    {user.permissions &&
+                                      user.permissions
+                                        .filter((permission: string) =>
+                                          [
+                                            "view_user_logs",
+                                            "edit_user",
+                                            "create_user",
+                                            "delete_user",
+                                            "create_role",
+                                            "manage_permissions",
+                                          ].includes(permission)
                                         )
-                                      )}
+                                        .map((permission: string) => (
+                                          <span
+                                            key={permission}
+                                            className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full"
+                                          >
+                                            {typeof permission === "string"
+                                              ? permission.replace(/_/g, " ")
+                                              : permission}
+                                          </span>
+                                        ))}
                                   </div>
                                 </div>
                               </div>
@@ -907,38 +946,108 @@ export function UserManagement() {
                     Global Permissions
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {availablePermissions.map((permission) => (
-                      <label
-                        key={
+                    {availablePermissions
+                      .filter((permission) => {
+                        const permName =
                           typeof permission === "object"
-                            ? String(permission.id || "")
-                            : String(permission)
-                        }
-                        className="flex items-center space-x-2 p-2 bg-gray-50 rounded"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={updatedPermissions.includes(
+                            ? permission.permission_name
+                            : permission;
+                        return ![
+                          "view_user_logs",
+                          "edit_user",
+                          "create_user",
+                          "delete_user",
+                          "create_role",
+                          "manage_permissions",
+                        ].includes(permName);
+                      })
+                      .map((permission) => (
+                        <label
+                          key={
                             typeof permission === "object"
-                              ? permission.permission_name
-                              : permission
-                          )}
-                          onChange={() => handlePermissionChange(permission)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm capitalize">
-                          {typeof permission === "object" &&
-                          permission.permission_name
-                            ? (permission as any).permission_name.replace(
-                                /_/g,
-                                " "
-                              )
-                            : typeof permission === "string"
-                            ? permission.replace(/_/g, " ")
-                            : String(permission)}
-                        </span>
-                      </label>
-                    ))}
+                              ? String(permission.id || "")
+                              : String(permission)
+                          }
+                          className="flex items-center space-x-2 p-2 bg-gray-50 rounded"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={updatedPermissions.includes(
+                              typeof permission === "object"
+                                ? permission.permission_name
+                                : permission
+                            )}
+                            onChange={() => handlePermissionChange(permission)}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm capitalize">
+                            {typeof permission === "object" &&
+                            permission.permission_name
+                              ? (permission as any).permission_name.replace(
+                                  /_/g,
+                                  " "
+                                )
+                              : typeof permission === "string"
+                              ? permission.replace(/_/g, " ")
+                              : String(permission)}
+                          </span>
+                        </label>
+                      ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-medium mb-3">
+                    User Management Permissions
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {availablePermissions
+                      .filter((permission) => {
+                        const permName =
+                          typeof permission === "object"
+                            ? permission.permission_name
+                            : permission;
+                        return [
+                          "view_user_logs",
+                          "edit_user",
+                          "create_user",
+                          "delete_user",
+                          "create_role",
+                          "manage_permissions",
+                        ].includes(permName);
+                      })
+                      .map((permission) => (
+                        <label
+                          key={
+                            typeof permission === "object"
+                              ? String(permission.id || "")
+                              : String(permission)
+                          }
+                          className="flex items-center space-x-2 p-2 bg-green-50 rounded"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={updatedPermissions.includes(
+                              typeof permission === "object"
+                                ? permission.permission_name
+                                : permission
+                            )}
+                            onChange={() => handlePermissionChange(permission)}
+                            className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                          />
+                          <span className="text-sm capitalize">
+                            {typeof permission === "object" &&
+                            permission.permission_name
+                              ? (permission as any).permission_name.replace(
+                                  /_/g,
+                                  " "
+                                )
+                              : typeof permission === "string"
+                              ? permission.replace(/_/g, " ")
+                              : String(permission)}
+                          </span>
+                        </label>
+                      ))}
                   </div>
                 </div>
 
@@ -1060,57 +1169,145 @@ export function UserManagement() {
                       Global Permissions
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {availablePermissions.map((permission) => (
-                        <label
-                          key={
+                      {availablePermissions
+                        .filter((permission) => {
+                          const permName =
                             typeof permission === "object"
-                              ? permission.id
-                              : permission
-                          }
-                          className="flex items-center space-x-2 p-2 bg-gray-50 rounded"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={permissionIncluded(
-                              newRole.permissions,
-                              permission
-                            )}
-                            onChange={() =>
-                              setNewRole((prev) => ({
-                                ...prev,
-                                permissions: permissionIncluded(
-                                  prev.permissions,
-                                  permission
-                                )
-                                  ? prev.permissions.filter(
-                                      (p) =>
-                                        p !== getPermissionName(permission) &&
-                                        (typeof p !== "object" ||
-                                          (p as any).id !==
-                                            (typeof permission === "object"
-                                              ? permission.id
-                                              : null))
-                                    )
-                                  : [
-                                      ...prev.permissions,
-                                      getPermissionName(permission),
-                                    ],
-                              }))
+                              ? permission.permission_name
+                              : permission;
+                          return ![
+                            "view_user_logs",
+                            "edit_user",
+                            "create_user",
+                            "delete_user",
+                            "create_role",
+                            "manage_permissions",
+                          ].includes(permName);
+                        })
+                        .map((permission) => (
+                          <label
+                            key={
+                              typeof permission === "object"
+                                ? permission.id
+                                : permission
                             }
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="text-sm capitalize">
-                            {typeof permission === "object" &&
-                            permission.permission_name
-                              ? permission.permission_name.replace(/_/g, " ")
-                              : typeof permission === "string"
-                              ? permission.replace(/_/g, " ")
-                              : String(permission)}
-                          </span>
-                        </label>
-                      ))}
+                            className="flex items-center space-x-2 p-2 bg-gray-50 rounded"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={permissionIncluded(
+                                newRole.permissions,
+                                permission
+                              )}
+                              onChange={() =>
+                                setNewRole((prev) => ({
+                                  ...prev,
+                                  permissions: permissionIncluded(
+                                    prev.permissions,
+                                    permission
+                                  )
+                                    ? prev.permissions.filter(
+                                        (p) =>
+                                          p !== getPermissionName(permission) &&
+                                          (typeof p !== "object" ||
+                                            (p as any).id !==
+                                              (typeof permission === "object"
+                                                ? permission.id
+                                                : null))
+                                      )
+                                    : [
+                                        ...prev.permissions,
+                                        getPermissionName(permission),
+                                      ],
+                                }))
+                              }
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm capitalize">
+                              {typeof permission === "object" &&
+                              permission.permission_name
+                                ? permission.permission_name.replace(/_/g, " ")
+                                : typeof permission === "string"
+                                ? permission.replace(/_/g, " ")
+                                : String(permission)}
+                            </span>
+                          </label>
+                        ))}
                     </div>
                   </div>
+
+                  <div>
+                    <h3 className="text-lg font-medium mb-3">
+                      User Management Permissions
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {availablePermissions
+                        .filter((permission) => {
+                          const permName =
+                            typeof permission === "object"
+                              ? permission.permission_name
+                              : permission;
+                          return [
+                            "view_user_logs",
+                            "edit_user",
+                            "create_user",
+                            "delete_user",
+                            "create_role",
+                            "manage_permissions",
+                          ].includes(permName);
+                        })
+                        .map((permission) => (
+                          <label
+                            key={
+                              typeof permission === "object"
+                                ? permission.id
+                                : permission
+                            }
+                            className="flex items-center space-x-2 p-2 bg-green-50 rounded"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={permissionIncluded(
+                                newRole.permissions,
+                                permission
+                              )}
+                              onChange={() =>
+                                setNewRole((prev) => ({
+                                  ...prev,
+                                  permissions: permissionIncluded(
+                                    prev.permissions,
+                                    permission
+                                  )
+                                    ? prev.permissions.filter(
+                                        (p) =>
+                                          p !== getPermissionName(permission) &&
+                                          (typeof p !== "object" ||
+                                            (p as any).id !==
+                                              (typeof permission === "object"
+                                                ? permission.id
+                                                : null))
+                                      )
+                                    : [
+                                        ...prev.permissions,
+                                        getPermissionName(permission),
+                                      ],
+                                }))
+                              }
+                              className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                            />
+                            <span className="text-sm capitalize">
+                              {typeof permission === "object" &&
+                              permission.permission_name
+                                ? permission.permission_name.replace(/_/g, " ")
+                                : typeof permission === "string"
+                                ? permission.replace(/_/g, " ")
+                                : String(permission)}
+                            </span>
+                          </label>
+                        ))}
+                    </div>
+                  </div>
+
                   <div>
                     <h3 className="text-lg font-medium mb-3">
                       Sector-Specific Permissions
