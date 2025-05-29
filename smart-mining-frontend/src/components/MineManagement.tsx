@@ -17,12 +17,14 @@ import {
   Trash2,
 } from "lucide-react";
 import { MineMap } from "./MineMap";
-import { Mine, Sector, SensorConfig } from "../types";
+import { Mine, Sector, SensorConfig, Permission } from "../types";
 import mineService from "../services/mineService";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useAuthStore } from "../store/authStore";
 
 export function MineManagement() {
+  const currentUser = useAuthStore((state) => state.user);
   const [mines, setMines] = useState<Mine[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -659,6 +661,12 @@ export function MineManagement() {
     return 5 + Math.floor((seed + Math.random() * 30) % 50);
   };
 
+  // Helper function to check if the current user has a specific permission
+  const hasPermission = (permission: Permission): boolean => {
+    if (!currentUser || !currentUser.permissions) return false;
+    return currentUser.permissions.includes(permission);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
@@ -672,13 +680,15 @@ export function MineManagement() {
               Monitor and manage mining operations
             </p>
           </div>
-          <button
-            onClick={() => setShowManageModal(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center"
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            Manage Mining Areas
-          </button>
+          {hasPermission("manage_mines") && (
+            <button
+              onClick={() => setShowManageModal(true)}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Manage Mining Areas
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -1011,16 +1021,18 @@ export function MineManagement() {
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold">Manage Mining Areas</h2>
                 <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => {
-                      setShowManageModal(false);
-                      setShowAddModal(true);
-                    }}
-                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add New
-                  </button>
+                  {hasPermission("create_mine") && (
+                    <button
+                      onClick={() => {
+                        setShowManageModal(false);
+                        setShowAddModal(true);
+                      }}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add New
+                    </button>
+                  )}
                   <button onClick={() => setShowManageModal(false)}>
                     <X className="w-6 h-6" />
                   </button>
@@ -1117,24 +1129,30 @@ export function MineManagement() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex space-x-3">
-                              <button
-                                onClick={() => handleEditMine(mine)}
-                                className="text-blue-600 hover:text-blue-900"
-                              >
-                                <Edit className="w-5 h-5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteMine(mine.id)}
-                                className="text-red-600 hover:text-red-900"
-                              >
-                                <Trash2 className="w-5 h-5" />
-                              </button>
-                              <button
-                                onClick={() => handleManageClick(mine)}
-                                className="text-green-600 hover:text-green-900"
-                              >
-                                <Settings className="w-5 h-5" />
-                              </button>
+                              {hasPermission("edit_mine") && (
+                                <button
+                                  onClick={() => handleEditMine(mine)}
+                                  className="text-blue-600 hover:text-blue-900"
+                                >
+                                  <Edit className="w-5 h-5" />
+                                </button>
+                              )}
+                              {hasPermission("delete_mine") && (
+                                <button
+                                  onClick={() => handleDeleteMine(mine.id)}
+                                  className="text-red-600 hover:text-red-900"
+                                >
+                                  <Trash2 className="w-5 h-5" />
+                                </button>
+                              )}
+                              {hasPermission("view_all_mines") && (
+                                <button
+                                  onClick={() => handleManageClick(mine)}
+                                  className="text-green-600 hover:text-green-900"
+                                >
+                                  <Settings className="w-5 h-5" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1160,14 +1178,16 @@ export function MineManagement() {
                 </div>
                 <div className="flex items-center gap-4">
                   {renderSectorsDropdown()}
-                  <button
-                    onClick={() => setShowManageSectorsModal(true)}
-                    className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 flex items-center"
-                    disabled={!selectedMine}
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    Manage Sectors
-                  </button>
+                  {hasPermission("manage_sectors") && (
+                    <button
+                      onClick={() => setShowManageSectorsModal(true)}
+                      className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 flex items-center"
+                      disabled={!selectedMine}
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Manage Sectors
+                    </button>
+                  )}
                   <button onClick={() => setShowDetailsModal(false)}>
                     <X className="w-6 h-6" />
                   </button>
@@ -1351,23 +1371,24 @@ export function MineManagement() {
                   <div className="bg-white border rounded-lg p-6">
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-semibold">Sensors</h3>
-                      {selectedSector !== "all" && (
-                        <button
-                          onClick={() => {
-                            const sector = selectedMine.sectors.find(
-                              (s) => s.id === selectedSector
-                            );
-                            if (sector) {
-                              setSelectedSectorForSensors(sector);
-                              setShowManageSensorsModal(true);
-                            }
-                          }}
-                          className="text-blue-500 hover:text-blue-600 flex items-center"
-                        >
-                          <Settings className="w-4 h-4 mr-1" />
-                          Manage Sensors
-                        </button>
-                      )}
+                      {selectedSector !== "all" &&
+                        hasPermission("manage_sensors") && (
+                          <button
+                            onClick={() => {
+                              const sector = selectedMine.sectors.find(
+                                (s) => s.id === selectedSector
+                              );
+                              if (sector) {
+                                setSelectedSectorForSensors(sector);
+                                setShowManageSensorsModal(true);
+                              }
+                            }}
+                            className="text-blue-500 hover:text-blue-600 flex items-center"
+                          >
+                            <Settings className="w-4 h-4 mr-1" />
+                            Manage Sensors
+                          </button>
+                        )}
                     </div>
                     <div className="space-y-4">
                       {selectedMine.sectors
@@ -1814,17 +1835,19 @@ export function MineManagement() {
                   Manage Sectors - {selectedMine.name}
                 </h2>
                 <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => {
-                      setShowManageSectorsModal(false);
-                      setEditingSector(null);
-                      setShowAddSectorModal(true);
-                    }}
-                    className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 flex items-center"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add New Sector
-                  </button>
+                  {hasPermission("create_sector") && (
+                    <button
+                      onClick={() => {
+                        setShowManageSectorsModal(false);
+                        setEditingSector(null);
+                        setShowAddSectorModal(true);
+                      }}
+                      className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 flex items-center"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add New Sector
+                    </button>
+                  )}
                   <button onClick={() => setShowManageSectorsModal(false)}>
                     <X className="w-6 h-6" />
                   </button>
@@ -1910,33 +1933,42 @@ export function MineManagement() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div className="flex space-x-3">
-                              <button
-                                onClick={() => handleEditSector(sector)}
-                                className="text-blue-600 hover:text-blue-900"
-                                title="Edit Sector"
-                              >
-                                <Edit className="w-5 h-5" />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleDeleteSector(selectedMine.id, sector.id)
-                                }
-                                className="text-red-600 hover:text-red-900"
-                                title="Delete Sector"
-                              >
-                                <Trash2 className="w-5 h-5" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedSector(sector.id);
-                                  setSelectedSectorForSensors(sector);
-                                  setShowManageSensorsModal(true);
-                                }}
-                                className="text-green-600 hover:text-green-900"
-                                title="Manage Sensors"
-                              >
-                                <Settings className="w-5 h-5" />
-                              </button>
+                              {hasPermission("edit_sector") && (
+                                <button
+                                  onClick={() => handleEditSector(sector)}
+                                  className="text-blue-600 hover:text-blue-900"
+                                  title="Edit Sector"
+                                >
+                                  <Edit className="w-5 h-5" />
+                                </button>
+                              )}
+                              {hasPermission("delete_sector") && (
+                                <button
+                                  onClick={() =>
+                                    handleDeleteSector(
+                                      selectedMine.id,
+                                      sector.id
+                                    )
+                                  }
+                                  className="text-red-600 hover:text-red-900"
+                                  title="Delete Sector"
+                                >
+                                  <Trash2 className="w-5 h-5" />
+                                </button>
+                              )}
+                              {hasPermission("manage_sensors") && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedSector(sector.id);
+                                    setSelectedSectorForSensors(sector);
+                                    setShowManageSensorsModal(true);
+                                  }}
+                                  className="text-green-600 hover:text-green-900"
+                                  title="Manage Sensors"
+                                >
+                                  <Settings className="w-5 h-5" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1959,17 +1991,19 @@ export function MineManagement() {
                   {selectedSectorForSensors.level})
                 </h2>
                 <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => {
-                      setShowManageSensorsModal(false);
-                      setSelectedSector(selectedSectorForSensors.id);
-                      setShowAddSensorModal(true);
-                    }}
-                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add New Sensor
-                  </button>
+                  {hasPermission("create_sensor") && (
+                    <button
+                      onClick={() => {
+                        setShowManageSensorsModal(false);
+                        setSelectedSector(selectedSectorForSensors.id);
+                        setShowAddSensorModal(true);
+                      }}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add New Sensor
+                    </button>
+                  )}
                   <button onClick={() => setShowManageSensorsModal(false)}>
                     <X className="w-6 h-6" />
                   </button>
@@ -2071,31 +2105,35 @@ export function MineManagement() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div className="flex space-x-3">
-                              <button
-                                onClick={() =>
-                                  handleEditSensor(
-                                    selectedSectorForSensors,
-                                    sensor
-                                  )
-                                }
-                                className="text-blue-600 hover:text-blue-900"
-                                title="Edit Sensor"
-                              >
-                                <Edit className="w-5 h-5" />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleDeleteSensor(
-                                    selectedMine.id,
-                                    selectedSectorForSensors.id,
-                                    sensor.id
-                                  )
-                                }
-                                className="text-red-600 hover:text-red-900"
-                                title="Delete Sensor"
-                              >
-                                <Trash2 className="w-5 h-5" />
-                              </button>
+                              {hasPermission("edit_sensor") && (
+                                <button
+                                  onClick={() =>
+                                    handleEditSensor(
+                                      selectedSectorForSensors,
+                                      sensor
+                                    )
+                                  }
+                                  className="text-blue-600 hover:text-blue-900"
+                                  title="Edit Sensor"
+                                >
+                                  <Edit className="w-5 h-5" />
+                                </button>
+                              )}
+                              {hasPermission("delete_sensor") && (
+                                <button
+                                  onClick={() =>
+                                    handleDeleteSensor(
+                                      selectedMine.id,
+                                      selectedSectorForSensors.id,
+                                      sensor.id
+                                    )
+                                  }
+                                  className="text-red-600 hover:text-red-900"
+                                  title="Delete Sensor"
+                                >
+                                  <Trash2 className="w-5 h-5" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

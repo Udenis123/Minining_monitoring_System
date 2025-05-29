@@ -7,9 +7,15 @@ use App\Models\Sector;
 use App\Models\Sensor;
 use App\Services\LogService;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 class SensorController extends Controller
 {
+    public function __construct()
+    {
+        // No middleware checks here
+    }
+
     public function createSensor(Request $request, $mineId, $sectorId)
     {
         $sector = Sector::where('mine_id', $mineId)

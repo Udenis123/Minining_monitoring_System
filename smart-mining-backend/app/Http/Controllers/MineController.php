@@ -6,9 +6,16 @@ use Illuminate\Http\Request;
 use App\Models\Mine;
 use App\Services\LogService;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 class MineController extends Controller
 {
+    // Constructor without middleware checks
+    public function __construct()
+    {
+        // No middleware checks here
+    }
+
     public function createMine(Request $request)
     {
         $validator = Validator::make($request->all(), [

@@ -124,7 +124,19 @@ export type Permission =
   | "access_messaging"
   | "send_messages"
   | "read_messages"
-  | "delete_messages";
+  | "delete_messages"
+  | "create_mine"
+  | "edit_mine"
+  | "delete_mine"
+  | "manage_mines"
+  | "create_sector"
+  | "edit_sector"
+  | "delete_sector"
+  | "manage_sectors"
+  | "create_sensor"
+  | "edit_sensor"
+  | "delete_sensor";
+  
 
 export type SectorPermission =
   | "view_sector"

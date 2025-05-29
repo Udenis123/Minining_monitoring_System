@@ -7,9 +7,15 @@ use App\Models\Mine;
 use App\Models\Sector;
 use App\Services\LogService;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 class SectorController extends Controller
 {
+    public function __construct()
+    {
+        // No middleware checks here
+    }
+
     public function createSector(Request $request, $mineId)
     {
         $mine = Mine::find($mineId);
