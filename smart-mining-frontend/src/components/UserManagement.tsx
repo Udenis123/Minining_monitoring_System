@@ -3,7 +3,14 @@ import { Sidebar } from "./Sidebar";
 import { useAuthStore } from "../store/authStore";
 import { mockMines } from "../data/mockData";
 import { User, Permission, SectorPermission } from "../types";
-import { Plus, X, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Plus,
+  X,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import {
   getAllUsers,
   createUser,
@@ -35,6 +42,8 @@ export function UserManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 6;
 
   // Real data from backend
   const [users, setUsers] = useState<any[]>([]);
@@ -588,6 +597,15 @@ export function UserManagement() {
     return true;
   };
 
+  // Calculate pagination values
+  const totalPages = Math.ceil(users.length / rowsPerPage);
+  const indexOfLastUser = currentPage * rowsPerPage;
+  const indexOfFirstUser = indexOfLastUser - rowsPerPage;
+  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
+
+  // Function to change page
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
@@ -684,7 +702,7 @@ export function UserManagement() {
                       </td>
                     </tr>
                   ) : (
-                    users.map((user) => (
+                    currentUsers.map((user) => (
                       <React.Fragment key={user.id}>
                         <tr className="border-b">
                           <td className="py-3 px-4">{user.name}</td>
@@ -900,6 +918,58 @@ export function UserManagement() {
                   )}
                 </tbody>
               </table>
+
+              {/* Pagination */}
+              {!loading && users.length > 0 && (
+                <div className="flex justify-between items-center mt-6">
+                  <div className="text-sm text-gray-500">
+                    Showing {indexOfFirstUser + 1} to{" "}
+                    {Math.min(indexOfLastUser, users.length)} of {users.length}{" "}
+                    users
+                  </div>
+                  <div className="flex space-x-1">
+                    <button
+                      onClick={() => paginate(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                      className={`px-3 py-1 rounded ${
+                        currentPage === 1
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                      }`}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+
+                    {[...Array(totalPages)].map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => paginate(i + 1)}
+                        className={`px-3 py-1 rounded ${
+                          currentPage === i + 1
+                            ? "bg-blue-500 text-white"
+                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        }`}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+
+                    <button
+                      onClick={() =>
+                        paginate(Math.min(totalPages, currentPage + 1))
+                      }
+                      disabled={currentPage === totalPages}
+                      className={`px-3 py-1 rounded ${
+                        currentPage === totalPages
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                      }`}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

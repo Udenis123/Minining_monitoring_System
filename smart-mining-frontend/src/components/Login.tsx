@@ -123,7 +123,7 @@ export function Login() {
           </Button>
         </div>
 
-        <div className="mt-6 text-sm text-gray-600 bg-white/50 p-3 rounded">
+        {/* <div className="mt-6 text-sm text-gray-600 bg-white/50 p-3 rounded">
           <p className="font-medium">Demo accounts:</p>
           <ul className="list-disc list-inside mt-1">
             <li>admin@mine.com</li>
@@ -131,7 +131,7 @@ export function Login() {
             <li>miner@mine.com</li>
             <li className="text-xs mt-1">(password: "password" for all)</li>
           </ul>
-        </div>
+        </div> */}
       </form>
     </AuthLayout>
   );
